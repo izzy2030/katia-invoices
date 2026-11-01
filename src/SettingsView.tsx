@@ -8,7 +8,8 @@ import {
   Palette,
   Download,
 } from 'lucide-react';
-import type { TaxDefaults, TaxSettings } from './workOrder';
+import type { BackupImportMode, BackupImportResult } from './backupService';
+import type { ReceiptStyle, TaxDefaults, TaxSettings } from './workOrder';
 import type {
   SettingsTab,
   SettingsTabItem,
@@ -28,6 +29,10 @@ interface SettingsViewProps {
   onSave: (settings: TaxSettings) => Promise<boolean | void>;
   onClose: () => void;
   onExportBackup?: () => void;
+  onExportSqlite?: () => void;
+  onImportBackup?: (
+    mode: BackupImportMode,
+  ) => Promise<BackupImportResult | undefined>;
   onExportCsv?: () => void;
   initialTab?: SettingsTab;
 }
@@ -64,7 +69,7 @@ const TABS: SettingsTabItem[] = [
   {
     id: 'backup',
     title: 'Backup & Data',
-    subtitle: 'Export & Storage',
+    subtitle: 'Export & Restore',
     icon: Download,
     colorClass: 'color-blue',
   },
@@ -76,6 +81,8 @@ export default function SettingsView({
   onSave,
   onClose,
   onExportBackup,
+  onExportSqlite,
+  onImportBackup,
   onExportCsv,
   initialTab = 'shop',
 }: SettingsViewProps) {
@@ -112,6 +119,9 @@ export default function SettingsView({
   );
   const [defaultSaveOldParts, setDefaultSaveOldParts] = useState(
     settings.defaultSaveOldParts ?? 'Yes',
+  );
+  const [receiptStyle, setReceiptStyle] = useState<ReceiptStyle>(
+    settings.receiptStyle ?? 'modern',
   );
   const [defaults, setDefaults] = useState<TaxDefaults>({
     ...settings.defaults,
@@ -264,6 +274,7 @@ export default function SettingsView({
     setDefaultTechnician(settings.defaultTechnician ?? '');
     setDefaultCallWhenReady(settings.defaultCallWhenReady ?? 'Yes');
     setDefaultSaveOldParts(settings.defaultSaveOldParts ?? 'Yes');
+    setReceiptStyle(settings.receiptStyle ?? 'modern');
     setDefaults({ ...settings.defaults });
   }, [settings]);
 
@@ -272,9 +283,24 @@ export default function SettingsView({
     if (themeId === 'classic') {
       document.documentElement.removeAttribute('data-theme');
       localStorage.removeItem('katia_theme');
+      void window.repairDesk?.setTitleBarOverlay?.({
+        color: '#ffffff',
+        symbolColor: '#0f172a',
+      });
     } else {
       document.documentElement.setAttribute('data-theme', themeId);
       localStorage.setItem('katia_theme', themeId);
+      if (themeId === 'abyssal') {
+        void window.repairDesk?.setTitleBarOverlay?.({
+          color: '#0f172a',
+          symbolColor: '#f1f5f9',
+        });
+      } else {
+        void window.repairDesk?.setTitleBarOverlay?.({
+          color: '#ffffff',
+          symbolColor: themeId === 'amber' ? '#1c1917' : '#0f172a',
+        });
+      }
     }
   };
 
@@ -293,6 +319,7 @@ export default function SettingsView({
       defaultTechnician: defaultTechnician.trim(),
       defaultCallWhenReady,
       defaultSaveOldParts,
+      receiptStyle,
       defaults,
     };
     await onSave(updated);
@@ -407,6 +434,8 @@ export default function SettingsView({
             setDefaultCallWhenReady={setDefaultCallWhenReady}
             defaultSaveOldParts={defaultSaveOldParts}
             setDefaultSaveOldParts={setDefaultSaveOldParts}
+            receiptStyle={receiptStyle}
+            setReceiptStyle={setReceiptStyle}
             busy={busy}
             onSave={handleSave}
             saved={saved}
@@ -459,6 +488,8 @@ export default function SettingsView({
           <BackupsTab
             busy={busy}
             onExportBackup={onExportBackup}
+            onExportSqlite={onExportSqlite}
+            onImportBackup={onImportBackup}
             onExportCsv={onExportCsv}
           />
         )}

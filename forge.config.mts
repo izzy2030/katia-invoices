@@ -8,9 +8,19 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    icon: './assets/icon',
+    extraResource: ['./assets'],
+    name: 'Katia Body Shop',
+    executableName: 'katia-body-shop',
+    appBundleId: 'com.katia.bodyshop',
   },
   rebuildConfig: {},
-  makers: [new MakerSquirrel({}), new MakerZIP({}, ['darwin'])],
+  makers: [
+    new MakerSquirrel({
+      setupIcon: './assets/icon.ico',
+    }),
+    new MakerZIP({}, ['darwin']),
+  ],
   plugins: [
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.

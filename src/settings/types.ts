@@ -1,4 +1,5 @@
-import type { TaxDefaults } from '../workOrder';
+import type { BackupImportMode, BackupImportResult } from '../backupService';
+import type { ReceiptStyle, TaxDefaults } from '../workOrder';
 
 export type SettingsTab = 'shop' | 'taxes' | 'email' | 'appearance' | 'backup';
 
@@ -42,6 +43,8 @@ export interface ShopTabProps {
   setDefaultCallWhenReady: (v: string) => void;
   defaultSaveOldParts: string;
   setDefaultSaveOldParts: (v: string) => void;
+  receiptStyle: ReceiptStyle;
+  setReceiptStyle: (v: ReceiptStyle) => void;
   busy: boolean;
   onSave: () => Promise<void>;
   saved: boolean;
@@ -89,5 +92,9 @@ export interface AppearanceTabProps {
 export interface BackupTabProps {
   busy: boolean;
   onExportBackup?: () => void;
+  onExportSqlite?: () => void;
+  onImportBackup?: (
+    mode: BackupImportMode,
+  ) => Promise<BackupImportResult | undefined>;
   onExportCsv?: () => void;
 }

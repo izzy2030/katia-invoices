@@ -79,7 +79,7 @@ export default function TaxesTab({
           <span>Default Charge Rules (New Orders)</span>
         </div>
 
-        <p className="settings-field-hint" style={{ marginBottom: 16 }}>
+        <p className="settings-field-hint settings-tax-hint">
           Choose which charge categories start checked as taxable when added to
           a new repair order.
         </p>
@@ -110,7 +110,7 @@ export default function TaxesTab({
           ))}
         </div>
 
-        <div className="settings-actions-bar" style={{ marginBottom: 24 }}>
+        <div className="settings-actions-bar">
           <button
             type="button"
             className="secondary-button"

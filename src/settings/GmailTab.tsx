@@ -103,7 +103,7 @@ export default function GmailTab({
                 </div>
 
                 <div className="settings-test-row">
-                  <div className="settings-input-wrap" style={{ flex: 1 }}>
+                  <div className="settings-input-wrap">
                     <input
                       type="email"
                       placeholder="Enter test recipient email (e.g. personal@example.com)"

@@ -1,3 +1,4 @@
+import type { BackupImportMode } from './backupService';
 import type { CustomerContact } from './customerHistory';
 import {
   type DashboardPreferences,
@@ -26,6 +27,10 @@ contextBridge.exposeInMainWorld('repairDesk', {
   openPath: (targetPath: string) =>
     ipcRenderer.invoke('shell:open-path', targetPath),
   exportBackupJson: () => ipcRenderer.invoke('backup:export-json'),
+  exportBackupSqlite: () => ipcRenderer.invoke('backup:export-sqlite'),
+  importBackup: (mode?: BackupImportMode) =>
+    ipcRenderer.invoke('backup:import', mode),
+  getDatabaseInfo: () => ipcRenderer.invoke('backup:get-db-info'),
   exportOrdersCsv: () => ipcRenderer.invoke('backup:export-csv'),
   getDashboardPreferences: () => ipcRenderer.invoke('dashboard:get'),
   saveDashboardPreferences: (preferences: DashboardPreferences) =>
@@ -65,4 +70,21 @@ contextBridge.exposeInMainWorld('repairDesk', {
     subject: string;
     personalNote?: string;
   }) => ipcRenderer.invoke('gmail:send-order', options),
+  platform: process.platform,
+  setTitleBarOverlay: (options: {
+    color: string;
+    symbolColor: string;
+    height?: number;
+  }) => ipcRenderer.invoke('window:set-title-bar-overlay', options),
+  minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
+  toggleMaximizeWindow: () => ipcRenderer.invoke('window:toggle-maximize'),
+  closeWindow: () => ipcRenderer.invoke('window:close'),
+  isWindowMaximized: () => ipcRenderer.invoke('window:is-maximized'),
+  onWindowMaximizedChange: (callback: (maximized: boolean) => void) => {
+    const listener = (_event: unknown, isMax: boolean) => callback(isMax);
+    ipcRenderer.on('window:maximized-change', listener);
+    return () => {
+      ipcRenderer.removeListener('window:maximized-change', listener);
+    };
+  },
 });

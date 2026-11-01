@@ -11,6 +11,7 @@ import {
   type DashboardPreferences,
   defaultLegacy,
   normalizeInput,
+  normalizeReceiptStyle,
   normalizeTaxDefaults,
   chargeTotals,
   otherChargesTotal,
@@ -27,6 +28,7 @@ import {
   type WorkOrderStatus,
 } from './workOrder';
 import {
+  buildKatiaEmailBrandHeader,
   connectGmailAccount,
   disconnectGmailAccount,
   getGmailStatus,
@@ -36,8 +38,16 @@ import {
   saveGoogleOAuthCredentials,
   type GoogleOAuthCredentials,
 } from './gmailAuth';
+import {
+  buildBackupPayload,
+  exportSqliteSnapshot,
+  restoreBackupFromFile,
+  type BackupImportMode,
+  type BackupImportResult,
+} from './backupService';
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import path from 'node:path';
+import { existsSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
@@ -45,12 +55,14 @@ import nodemailer, { type SendMailOptions } from 'nodemailer';
 import started from 'electron-squirrel-startup';
 
 let database: DatabaseSync;
+let databaseFilePath = '';
 
 function initializeDatabase() {
   const fileName = app.isPackaged
     ? 'katia-body-shop.sqlite'
     : 'katia-body-shop-dev.sqlite';
-  database = new DatabaseSync(path.join(app.getPath('userData'), fileName));
+  databaseFilePath = path.join(app.getPath('userData'), fileName);
+  database = new DatabaseSync(databaseFilePath);
   database.exec('PRAGMA journal_mode = WAL;');
   database.exec(`
     CREATE TABLE IF NOT EXISTS work_orders (
@@ -358,6 +370,7 @@ function getSettings(): TaxSettings {
     defaultTechnician: readSetting('shop_technician') ?? '',
     defaultCallWhenReady: readSetting('shop_call_when_ready') ?? 'Yes',
     defaultSaveOldParts: readSetting('shop_save_old_parts') ?? 'Yes',
+    receiptStyle: normalizeReceiptStyle(readSetting('receipt_style')),
   };
 }
 
@@ -385,6 +398,7 @@ function saveSettings(settings: TaxSettings): TaxSettings {
   const defaultTechnician = (settings.defaultTechnician ?? '').trim();
   const defaultCallWhenReady = settings.defaultCallWhenReady ?? 'Yes';
   const defaultSaveOldParts = settings.defaultSaveOldParts ?? 'Yes';
+  const receiptStyle = normalizeReceiptStyle(settings.receiptStyle);
   const defaults = normalizeTaxDefaults(settings.defaults);
 
   database.exec('BEGIN IMMEDIATE;');
@@ -459,6 +473,11 @@ function saveSettings(settings: TaxSettings): TaxSettings {
         "INSERT INTO app_settings (key, value) VALUES ('shop_save_old_parts', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
       )
       .run(defaultSaveOldParts);
+    database
+      .prepare(
+        "INSERT INTO app_settings (key, value) VALUES ('receipt_style', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+      )
+      .run(receiptStyle);
     database.exec('COMMIT;');
   } catch (error) {
     database.exec('ROLLBACK;');
@@ -479,6 +498,7 @@ function saveSettings(settings: TaxSettings): TaxSettings {
     defaultTechnician,
     defaultCallWhenReady,
     defaultSaveOldParts,
+    receiptStyle,
   };
 }
 
@@ -545,8 +565,6 @@ function seedDemoWorkOrder() {
     .prepare('SELECT 1 FROM work_orders WHERE customer_name = ?')
     .get('Morgan Example (DEMO)');
   if (fullDemo) return;
-  const signatureSvg =
-    '<svg xmlns="http://www.w3.org/2000/svg" width="700" height="120" viewBox="0 0 700 120"><path d="M18 82 C45 12 48 117 78 63 S110 92 137 55 164 84 187 46 212 98 245 62 275 87 302 45 337 87 365 60 392 92 419 53 450 83 474 49 508 75 541 56 571 80 603 47 633 68 678 39" fill="none" stroke="#17243b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   saveWorkOrder({
     customerName: 'Morgan Example (DEMO)',
     phone: '(630) 555-0188',
@@ -675,8 +693,8 @@ function seedDemoWorkOrder() {
       revisedTime: '14:40',
       revisedCalledBy: 'Jamie Example',
       revisedPhone: '(630) 555-0188',
-      signature: `data:image/svg+xml;base64,${Buffer.from(signatureSvg).toString('base64')}`,
-      signatureDate: localDate(),
+      signature: '',
+      signatureDate: '',
     },
   });
 }
@@ -696,10 +714,9 @@ async function generateOrderPdfBuffer(order: WorkOrder): Promise<Buffer> {
       `data:text/html;charset=utf-8,${encodeURIComponent(receiptHtml(order, shopSettings))}`,
     );
     const pdf = await printWindow.webContents.printToPDF({
-      pageSize: 'Letter',
-      landscape: true,
       printBackground: true,
-      margins: { top: 0.3, bottom: 0.3, left: 0.4, right: 0.4 },
+      preferCSSPageSize: true,
+      margins: { top: 0, bottom: 0, left: 0, right: 0 },
     });
     return Buffer.from(pdf);
   } finally {
@@ -967,18 +984,18 @@ async function sendTestEmail(
     config.provider === 'gmail' ? config.gmailUser : config.resendFromEmail;
 
   const html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 32px 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; color: #1e293b;">
-      <div style="margin-bottom: 24px; border-bottom: 2px solid #2563eb; padding-bottom: 16px;">
-        <h2 style="margin: 0; font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.01em;">KATIA AUTO SALES & REPAIRS</h2>
-        <p style="margin: 4px 0 0; font-size: 13px; color: #64748b;">1005 Rural St, Aurora, IL 60505 · (630) 907-7198</p>
-      </div>
-      <div style="padding: 16px 20px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; margin-bottom: 20px;">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 32px 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; color: #1e293b;">
+      ${buildKatiaEmailBrandHeader({
+        shopName: 'KATIA AUTO SALES & REPAIRS',
+        subtitle: '1005 Rural St, Aurora, IL 60505 · (630) 907-7198',
+      })}
+      <div style="padding: 16px 20px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; margin-bottom: 20px;">
         <h3 style="margin: 0 0 6px; font-size: 16px; color: #065f46; font-weight: 700;">✓ Email Delivery Test Successful!</h3>
         <p style="margin: 0; font-size: 13px; color: #047857; line-height: 1.5;">
           Your Katia Invoices email delivery pipeline is verified and operational.
         </p>
       </div>
-      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin-bottom: 24px; font-size: 13px;">
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 24px; font-size: 13px;">
         <table style="width: 100%; border-collapse: collapse;">
           <tr>
             <td style="padding: 5px 0; color: #64748b;">Active Delivery Provider:</td>
@@ -1037,18 +1054,18 @@ async function sendOrderEmail(
   const messageBody = customMessage?.trim() || defaultNote;
 
   const html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; color: #1e293b;">
-      <div style="margin-bottom: 24px; border-bottom: 2px solid #2563eb; padding-bottom: 16px;">
-        <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: 0.5px;">KATIA AUTO SALES & REPAIRS</h1>
-        <p style="margin: 4px 0 0; font-size: 13px; color: #64748b;">1005 Rural St, Aurora, IL 60505 · Tel: (630) 907-7198</p>
-      </div>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; color: #1e293b;">
+      ${buildKatiaEmailBrandHeader({
+        shopName: 'KATIA AUTO SALES & REPAIRS',
+        subtitle: '1005 Rural St, Aurora, IL 60505 · Tel: (630) 907-7198',
+      })}
       <p style="font-size: 15px; color: #1e293b; margin: 0 0 12px;">
         Hello <strong>${order.customerName}</strong>,
       </p>
       <p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 20px;">
         ${messageBody.replace(/\n/g, '<br/>')}
       </p>
-      <div style="margin: 20px 0; padding: 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+      <div style="margin: 20px 0; padding: 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
         <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
           <tr>
             <td style="padding: 6px 0; color: #64748b;">Repair Order:</td>
@@ -1112,18 +1129,18 @@ async function handleSendGmailTestEmail(
   const shopName = shopSettings.shopName || 'Katia Auto Sales & Repairs';
 
   const html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 32px 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; color: #1e293b;">
-      <div style="margin-bottom: 24px; border-bottom: 2px solid #2563eb; padding-bottom: 16px;">
-        <h2 style="margin: 0; font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.01em;">${shopName.toUpperCase()}</h2>
-        <p style="margin: 4px 0 0; font-size: 13px; color: #64748b;">Gmail API OAuth 2.0 Integration Test</p>
-      </div>
-      <div style="padding: 16px 20px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; margin-bottom: 20px;">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 32px 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; color: #1e293b;">
+      ${buildKatiaEmailBrandHeader({
+        shopName: shopName.toUpperCase(),
+        subtitle: 'Gmail API OAuth 2.0 Integration Test',
+      })}
+      <div style="padding: 16px 20px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; margin-bottom: 20px;">
         <h3 style="margin: 0 0 6px; font-size: 16px; color: #065f46; font-weight: 700;">✓ Gmail OAuth 2.0 Connected Successfully!</h3>
         <p style="margin: 0; font-size: 13px; color: #047857; line-height: 1.5;">
           This test message confirms that your desktop application is authenticated with Google and can send customer invoices through the official Gmail REST API.
         </p>
       </div>
-      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
         <p style="margin: 0 0 6px; color: #64748b;"><strong>Sent At:</strong> ${new Date().toLocaleString('en-US')}</p>
         <p style="margin: 0; color: #64748b;"><strong>Active Scope:</strong> https://www.googleapis.com/auth/gmail.send</p>
       </div>
@@ -1190,18 +1207,18 @@ async function handleSendGmailOrderEmail(options: {
   const note = options.personalNote?.trim() || defaultNote;
 
   const html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; color: #1e293b;">
-      <div style="margin-bottom: 24px; border-bottom: 2px solid #2563eb; padding-bottom: 16px;">
-        <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: 0.5px;">${shopName.toUpperCase()}</h1>
-        <p style="margin: 4px 0 0; font-size: 13px; color: #64748b;">${shopSettings.shopAddress || '1005 Rural St, Aurora, IL 60505'} · Tel: ${shopSettings.shopPhone || '(630) 907-7198'}</p>
-      </div>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; color: #1e293b;">
+      ${buildKatiaEmailBrandHeader({
+        shopName: shopName.toUpperCase(),
+        subtitle: `${shopSettings.shopAddress || '1005 Rural St, Aurora, IL 60505'} · Tel: ${shopSettings.shopPhone || '(630) 907-7198'}`,
+      })}
       <p style="font-size: 15px; color: #1e293b; margin: 0 0 12px;">
         Hello <strong>${fullOrder.customerName}</strong>,
       </p>
       <p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 20px;">
         ${note.replace(/\n/g, '<br/>')}
       </p>
-      <div style="margin: 20px 0; padding: 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+      <div style="margin: 20px 0; padding: 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
         <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
           <tr>
             <td style="padding: 6px 0; color: #64748b;">Repair Order:</td>
@@ -1312,15 +1329,64 @@ async function exportBackupJson(): Promise<boolean> {
     filters: [{ name: 'JSON Backup', extensions: ['json'] }],
   });
   if (canceled || !filePath) return false;
-  const backupData = {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    workOrders: listWorkOrders(),
-    customerContacts: listCustomerContacts(),
-    settings: getSettings(),
-  };
+  const backupData = buildBackupPayload(database);
   await fs.writeFile(filePath, JSON.stringify(backupData, null, 2), 'utf8');
   return true;
+}
+
+async function exportBackupSqlite(): Promise<boolean> {
+  const defaultFileName = `katia-body-shop-${localDate()}.sqlite`;
+  const { canceled, filePath } = await dialog.showSaveDialog({
+    title: 'Export SQLite Database File',
+    defaultPath: defaultFileName,
+    filters: [{ name: 'SQLite Database', extensions: ['sqlite', 'db'] }],
+  });
+  if (canceled || !filePath) return false;
+  await exportSqliteSnapshot(database, filePath, databaseFilePath);
+  return true;
+}
+
+async function importBackup(
+  mode: BackupImportMode = 'merge',
+): Promise<BackupImportResult> {
+  const safeMode: BackupImportMode = mode === 'replace' ? 'replace' : 'merge';
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    title: 'Import / Restore Katia Body Shop Backup',
+    properties: ['openFile'],
+    filters: [
+      {
+        name: 'Katia Backups & Databases (.json, .sqlite, .db)',
+        extensions: ['json', 'sqlite', 'sqlite3', 'db'],
+      },
+      { name: 'JSON Backup (.json)', extensions: ['json'] },
+      {
+        name: 'SQLite Database (.sqlite, .db)',
+        extensions: ['sqlite', 'sqlite3', 'db'],
+      },
+    ],
+  });
+  if (canceled || !filePaths.length || !filePaths[0]) {
+    return {
+      canceled: true,
+      mode: safeMode,
+      ordersAdded: 0,
+      ordersUpdated: 0,
+      contactsSaved: 0,
+      settingsRestored: false,
+      totalOrders: 0,
+      totalContacts: 0,
+    };
+  }
+  const result = await restoreBackupFromFile(
+    database,
+    filePaths[0],
+    safeMode,
+    databaseFilePath,
+  );
+  return {
+    canceled: false,
+    ...result,
+  };
 }
 
 async function exportOrdersCsv(): Promise<boolean> {
@@ -1388,15 +1454,54 @@ async function exportOrdersCsv(): Promise<boolean> {
 
 if (started) app.quit();
 
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.katia.bodyshop');
+}
+
+function getAppIconPath(): string | undefined {
+  const isWin = process.platform === 'win32';
+  const primaryName = isWin ? 'icon.ico' : 'icon.png';
+  const fallbackName = isWin ? 'icon.png' : 'icon.ico';
+  const candidates = [
+    path.join(__dirname, `../../assets/${primaryName}`),
+    path.join(__dirname, `../../assets/${fallbackName}`),
+    path.join(process.resourcesPath, `assets/${primaryName}`),
+    path.join(process.resourcesPath, `assets/${fallbackName}`),
+    path.join(process.resourcesPath, primaryName),
+    path.join(process.resourcesPath, fallbackName),
+    path.join(app.getAppPath(), `assets/${primaryName}`),
+    path.join(app.getAppPath(), `assets/${fallbackName}`),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return undefined;
+}
+
 function createWindow() {
+  const isWin = process.platform === 'win32';
+  const isMac = process.platform === 'darwin';
+  const appIcon = getAppIconPath();
+
   const mainWindow = new BrowserWindow({
     width: 1440,
     height: 960,
     minWidth: 1024,
     minHeight: 720,
-    backgroundColor: '#f4f7fb',
+    backgroundColor: '#ffffff',
     title: 'Katia Body Shop',
+    icon: appIcon,
     autoHideMenuBar: true,
+    titleBarStyle: isMac ? 'hiddenInset' : isWin ? 'hidden' : 'default',
+    ...(isWin
+      ? {
+          titleBarOverlay: {
+            color: '#ffffff',
+            symbolColor: '#0f172a',
+            height: 38,
+          },
+        }
+      : {}),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -1405,6 +1510,13 @@ function createWindow() {
     },
   });
   mainWindow.setMenuBarVisibility(false);
+
+  mainWindow.on('maximize', () => {
+    mainWindow.webContents.send('window:maximized-change', true);
+  });
+  mainWindow.on('unmaximize', () => {
+    mainWindow.webContents.send('window:maximized-change', false);
+  });
 
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
@@ -1420,6 +1532,47 @@ app
   .then(() => {
     initializeDatabase();
     seedDemoWorkOrder();
+    ipcMain.handle('window:minimize', (event) => {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      win?.minimize();
+      return true;
+    });
+    ipcMain.handle('window:toggle-maximize', (event) => {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (!win) return false;
+      if (win.isMaximized()) {
+        win.unmaximize();
+      } else {
+        win.maximize();
+      }
+      return win.isMaximized();
+    });
+    ipcMain.handle('window:close', (event) => {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      win?.close();
+      return true;
+    });
+    ipcMain.handle('window:is-maximized', (event) => {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      return win?.isMaximized() ?? false;
+    });
+    ipcMain.handle(
+      'window:set-title-bar-overlay',
+      (
+        event,
+        options: { color: string; symbolColor: string; height?: number },
+      ) => {
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (win && process.platform === 'win32') {
+          win.setTitleBarOverlay?.({
+            color: options.color,
+            symbolColor: options.symbolColor,
+            height: options.height ?? 38,
+          });
+        }
+        return true;
+      },
+    );
     ipcMain.handle('work-orders:list', () => listWorkOrders());
     ipcMain.handle('customer-contacts:list', () => listCustomerContacts());
     ipcMain.handle(
@@ -1451,6 +1604,15 @@ app
       return false;
     });
     ipcMain.handle('backup:export-json', () => exportBackupJson());
+    ipcMain.handle('backup:export-sqlite', () => exportBackupSqlite());
+    ipcMain.handle('backup:import', (_event, mode?: BackupImportMode) =>
+      importBackup(mode),
+    );
+    ipcMain.handle('backup:get-db-info', () => ({
+      dbPath: databaseFilePath,
+      dbFileName: path.basename(databaseFilePath),
+      dbFolder: path.dirname(databaseFilePath),
+    }));
     ipcMain.handle('backup:export-csv', () => exportOrdersCsv());
     ipcMain.handle('dashboard:get', () => {
       const raw = readSetting('dashboard_preferences');

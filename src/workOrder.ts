@@ -106,6 +106,10 @@ export const defaultTaxable = (
   kind: ChargeKind,
   defaults: TaxDefaults = builtInTaxDefaults,
 ) => defaults[kind];
+export const RECEIPT_STYLES = ['modern', 'classic'] as const;
+export type ReceiptStyle = (typeof RECEIPT_STYLES)[number];
+export const normalizeReceiptStyle = (value: unknown): ReceiptStyle =>
+  RECEIPT_STYLES.find((style) => style === value) ?? 'modern';
 export type TaxSettings = {
   taxRate: string;
   defaults: TaxDefaults;
@@ -121,6 +125,7 @@ export type TaxSettings = {
   defaultTechnician?: string;
   defaultCallWhenReady?: string;
   defaultSaveOldParts?: string;
+  receiptStyle?: ReceiptStyle;
 };
 
 export type EmailProvider = 'resend' | 'gmail';
@@ -298,23 +303,40 @@ export const revisedEstimateTotal = (input: WorkOrderInput) =>
   Math.round(
     (chargeTotals(input).total + supplementTotals(input).total) * 100,
   ) / 100;
+const VALID_CHARGE_KINDS: readonly ChargeKind[] = [
+  'parts',
+  'labor',
+  'sublet',
+  'fluids',
+  'disposal',
+  'other',
+];
 function normalizeCharges(lines: ChargeLine[]) {
-  return lines.map((line) => {
-    const quantity = line.quantity?.trim() ? line.quantity : '1';
-    const normalized = {
-      ...line,
-      quantity,
-      partNumber: line.partNumber ?? '',
-      taxable: line.taxable ?? defaultTaxable(line.kind),
-    };
-    const unitPrice = line.unitPrice?.trim();
-    if (!unitPrice) return normalized;
-    return {
-      ...normalized,
-      unitPrice,
-      amount: String(lineTotal({ ...normalized, unitPrice })),
-    };
-  });
+  if (!Array.isArray(lines)) return [];
+  return lines
+    .filter((line) => Boolean(line && typeof line === 'object'))
+    .map((line) => {
+      const kind: ChargeKind = VALID_CHARGE_KINDS.includes(line.kind)
+        ? line.kind
+        : 'other';
+      const quantity = line.quantity?.trim() ? line.quantity : '1';
+      const normalized = {
+        ...line,
+        kind,
+        description: String(line.description ?? ''),
+        amount: String(line.amount ?? ''),
+        quantity,
+        partNumber: line.partNumber ?? '',
+        taxable: line.taxable ?? defaultTaxable(kind),
+      };
+      const unitPrice = line.unitPrice?.trim();
+      if (!unitPrice) return normalized;
+      return {
+        ...normalized,
+        unitPrice,
+        amount: String(lineTotal({ ...normalized, unitPrice })),
+      };
+    });
 }
 export function normalizeInput(input: WorkOrderInput): WorkOrderInput {
   const normalized = {

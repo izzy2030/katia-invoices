@@ -7,6 +7,8 @@ import {
   Wrench,
   Check,
 } from 'lucide-react';
+import KatiaLogo from '../KatiaLogo';
+import { normalizeReceiptStyle } from '../workOrder';
 import type { ShopTabProps } from './types';
 
 export default function ShopTab({
@@ -34,6 +36,8 @@ export default function ShopTab({
   setDefaultCallWhenReady,
   defaultSaveOldParts,
   setDefaultSaveOldParts,
+  receiptStyle,
+  setReceiptStyle,
   busy,
   onSave,
   saved,
@@ -43,7 +47,7 @@ export default function ShopTab({
       <div className="settings-card-panel">
         <div className="settings-card-top">
           <div className="settings-card-icon-box primary">
-            <Store size={26} />
+            <KatiaLogo size={36} />
           </div>
           <div>
             <h3>Shop Profile &amp; Document Defaults</h3>
@@ -266,6 +270,29 @@ export default function ShopTab({
                 <option value="No">No</option>
               </select>
             </div>
+          </div>
+
+          <div className="settings-input-group">
+            <label>
+              <span className="dot" />
+              Receipt Style
+            </label>
+            <div className="settings-input-wrap">
+              <select
+                value={receiptStyle}
+                onChange={(e) =>
+                  setReceiptStyle(normalizeReceiptStyle(e.target.value))
+                }
+              >
+                <option value="modern">Modern</option>
+                <option value="classic">Classic form</option>
+              </select>
+            </div>
+            <small className="settings-field-hint">
+              {receiptStyle === 'modern'
+                ? 'Portrait page that leads with the total.'
+                : 'Landscape form with blank rows for handwriting. Additional work appears as a summary, not line by line.'}
+            </small>
           </div>
         </div>
 

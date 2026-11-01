@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" role="img" aria-label="Katia Body Shop App Icon">
+  <defs>
+    <linearGradient id="kai-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#172554"/>
+      <stop offset="100%" stop-color="#090d16"/>
+    </linearGradient>
+    <linearGradient id="kai-outer" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="50%" stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="kai-rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#93c5fd"/>
+      <stop offset="50%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="kai-core" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0b1324"/>
+      <stop offset="100%" stop-color="#13203b"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="24" y="24" width="976" height="976" rx="180" fill="url(#kai-bg)" stroke="#1e3a8a" stroke-width="16" />
+
+  <g transform="translate(68, 68) scale(7.4)">
+    <polygon
+      points="60,4 109,32 109,88 60,116 11,88 11,32"
+      fill="url(#kai-outer)"
+      stroke="url(#kai-rim)"
+      stroke-width="3.2"
+      stroke-linejoin="round"
+    />
+    <polygon
+      points="60,12 101,36 101,84 60,108 19,84 19,36"
+      fill="url(#kai-core)"
+      stroke="#38bdf8"
+      stroke-opacity="0.55"
+      stroke-width="1.6"
+      stroke-linejoin="round"
+    />
+    <circle cx="60" cy="8.2" r="2" fill="#94a3b8" />
+    <circle cx="104.8" cy="34.1" r="2" fill="#94a3b8" />
+    <circle cx="104.8" cy="85.9" r="2" fill="#94a3b8" />
+    <circle cx="60" cy="111.8" r="2" fill="#94a3b8" />
+    <circle cx="15.2" cy="85.9" r="2" fill="#94a3b8" />
+    <circle cx="15.2" cy="34.1" r="2" fill="#94a3b8" />
+
+    <path
+      d="M36 30 L45 22 H75 L84 30"
+      stroke="#38bdf8"
+      stroke-width="2.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-opacity="0.7"
+    />
+    <rect x="53" y="16.5" width="14" height="2.5" rx="1.2" fill="#38bdf8" />
+
+    <path d="M21 56 H32 L34 60 H21 Z" fill="#2563eb" />
+    <path d="M21 63 H33 L31 66.5 H21 Z" fill="#38bdf8" />
+    <path d="M88 56 H99 V60 H86 Z" fill="#2563eb" />
+    <path d="M87 63 H99 V66.5 H89 Z" fill="#38bdf8" />
+
+    <path
+      d="M25 76 L33 70 H87 L95 76 L91 82 H29 L25 76 Z"
+      fill="#2563eb"
+      fill-opacity="0.32"
+      stroke="#38bdf8"
+      stroke-width="1.6"
+      stroke-linejoin="round"
+    />
+    <polygon points="27,75 35,71.5 39,75 30,78.5" fill="#38bdf8" />
+    <polygon points="93,75 85,71.5 81,75 90,78.5" fill="#38bdf8" />
+    <line x1="43" y1="74" x2="77" y2="74" stroke="#38bdf8" stroke-width="1.4" stroke-opacity="0.75" />
+    <line x1="45" y1="77.5" x2="75" y2="77.5" stroke="#38bdf8" stroke-width="1.4" stroke-opacity="0.75" />
+
+    <path d="M36 31 H49.5 V81 H36 V31 Z" fill="#ffffff" />
+    <path d="M48.5 52.5 H55 L74 31 H87.5 L64.5 56 L88 81 H73.5 L54.5 59 H48.5 V52.5 Z" fill="#ffffff" />
+    <path d="M52 46.5 L66 31 H71.5 L52 52.5 V46.5 Z" fill="#38bdf8" />
+
+    <rect x="42" y="87" width="36" height="3" rx="1.5" fill="#38bdf8" opacity="0.9" />
+    <rect x="48" y="92.5" width="24" height="2.4" rx="1.2" fill="#2563eb" />
+  </g>
+</svg>

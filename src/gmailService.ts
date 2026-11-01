@@ -19,6 +19,9 @@ import {
   buildGmailMimeMessage,
   type MimeAttachment,
 } from './gmailMime';
+import { buildKatiaEmailBrandHeader, katiaHexBadgeSvg } from './logo';
+
+export { buildKatiaEmailBrandHeader };
 
 export interface GmailConnectionStatus {
   connected: boolean;
@@ -171,10 +174,13 @@ async function executeBrowserOAuthFlow(
         if (error) {
           res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' });
           res.end(`
-            <!doctype html><html><body style="font-family: sans-serif; text-align: center; padding: 40px;">
-              <h2 style="color: #dc2626;">Google Authentication Cancelled</h2>
-              <p>${encodeURIComponent(error)}</p>
-              <p>You can close this window and return to Katia Invoices.</p>
+            <!doctype html><html><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: center; padding: 48px 24px; background: #f8fafc; color: #0f172a;">
+              <div style="background: white; padding: 36px 32px; border-radius: 12px; border: 1px solid #e2e8f0; max-width: 460px; margin: 0 auto; box-shadow: 0 12px 30px rgba(0,0,0,0.06);">
+                <div style="margin: 0 auto 16px; width: 60px; height: 60px;">${katiaHexBadgeSvg({ size: 60 })}</div>
+                <h2 style="color: #dc2626; margin: 0 0 8px;">Google Authentication Cancelled</h2>
+                <p style="color: #64748b; font-size: 14px;">${encodeURIComponent(error)}</p>
+                <p style="color: #475569; font-size: 13px; margin-bottom: 0;">You can close this window and return to Katia Invoices.</p>
+              </div>
             </body></html>
           `);
           cleanup();
@@ -237,11 +243,12 @@ async function executeBrowserOAuthFlow(
           <html>
             <head><title>Gmail Connected · Katia Invoices</title></head>
             <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 90vh; background: #f8fafc; color: #0f172a;">
-              <div style="background: white; padding: 40px 32px; border-radius: 20px; border: 1px solid #e2e8f0; max-width: 480px; text-align: center; box-shadow: 0 12px 30px rgba(0,0,0,0.06);">
-                <div style="width: 56px; height: 56px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #059669; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px;">✓</div>
+              <div style="background: white; padding: 40px 32px; border-radius: 12px; border: 1px solid #e2e8f0; max-width: 480px; text-align: center; box-shadow: 0 12px 30px rgba(0,0,0,0.06);">
+                <div style="width: 68px; height: 68px; margin: 0 auto 16px;">${katiaHexBadgeSvg({ size: 68 })}</div>
+                <div style="display: inline-block; padding: 4px 10px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #059669; border-radius: 6px; font-size: 12px; font-weight: 700; margin-bottom: 12px;">✓ OAUTH 2.0 VERIFIED</div>
                 <h2 style="margin: 0 0 8px; font-size: 22px; font-weight: 800;">Gmail Successfully Connected!</h2>
-                <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin: 0 0 20px;">Authenticated as <strong>${email}</strong>.</p>
-                <div style="padding: 12px; background: #f1f5f9; border-radius: 10px; font-size: 13px; font-weight: 600; color: #475569;">You can safely close this browser window and return to Katia Invoices.</div>
+                <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin: 0 0 20px;">Authenticated as <strong>${email}</strong> for Katia Auto Sales &amp; Repairs.</p>
+                <div style="padding: 12px; background: #f1f5f9; border-radius: 8px; font-size: 13px; font-weight: 600; color: #475569;">You can safely close this browser window and return to Katia Invoices.</div>
               </div>
             </body>
           </html>

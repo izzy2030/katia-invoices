@@ -535,4 +535,179 @@ const { normalizeInput, chargeTotals } = workOrderModule;
   );
 }
 
+// 5. Test Nut Ring Logo Suite, Receipt Header & Email Brand Header
+const logoModule = loadModule('logo');
+const receiptModule = loadModule('receipt');
+
+{
+  // Test 5.1: Ring mark vs small solid mark
+  const ringSvg = logoModule.katiaHexBadgeSvg({ size: 38 });
+  assert.ok(ringSvg.startsWith('<svg'), 'Must return valid SVG element');
+  assert.ok(
+    ringSvg.includes('width="38"'),
+    'Mark SVG must respect requested size',
+  );
+  assert.equal(
+    ringSvg.match(/<path/g).length,
+    2,
+    '38px mark must draw the ring and the solid K hexagon',
+  );
+
+  const smallSvg = logoModule.katiaHexBadgeSvg({ size: 16 });
+  assert.equal(
+    smallSvg.match(/<path/g).length,
+    1,
+    '16px mark must drop the ring so the gap does not close up',
+  );
+
+  const printSvg = logoModule.katiaHexBadgeSvg({
+    size: 64,
+    variant: 'print',
+    className: 'brand-logo',
+  });
+  assert.ok(
+    printSvg.includes('class="brand-logo"'),
+    'Must include custom className',
+  );
+  assert.ok(
+    printSvg.includes('fill="#0f172a"'),
+    'Print variant must use the dark ink color',
+  );
+  assert.ok(
+    !printSvg.includes('<text'),
+    'Mark must not depend on installed fonts',
+  );
+
+  // Test 5.2: Horizontal Lockup, Google Profile Avatar & App Icon SVGs
+  const horizSvg = logoModule.katiaHorizontalLockupSvg();
+  assert.ok(horizSvg.includes('viewBox="0 0 900 300"'));
+  assert.ok(horizSvg.includes('Katia Auto Sales &amp; Repairs Inc.'));
+  assert.ok(!horizSvg.includes('<text'), 'Lockup must use outlined type');
+  assert.ok(!horizSvg.includes('<rect'), 'Lockup must be transparent');
+
+  const gbpSvg = logoModule.katiaGoogleProfileAvatarSvg();
+  assert.ok(gbpSvg.includes('viewBox="0 0 1024 1024"'));
+  assert.ok(gbpSvg.includes('Katia Auto Sales &amp; Repairs Inc.'));
+
+  const appIconSvg = logoModule.katiaAppIconSvg();
+  assert.ok(appIconSvg.includes('rx="180"'));
+
+  // Test 5.3: Email Brand Header & htmlToPlainText SVG stripping
+  const emailHeader = logoModule.buildKatiaEmailBrandHeader({
+    shopName: 'Katia Auto Sales & Repairs',
+    subtitle: '1005 Rural St, Aurora, IL 60505',
+  });
+  assert.ok(
+    emailHeader.includes('<svg'),
+    'Email header must embed Nut Ring SVG',
+  );
+  assert.ok(
+    emailHeader.includes('fill="#ffffff"'),
+    'Email header mark must be reversed to show on its dark box',
+  );
+  assert.ok(
+    emailHeader.includes('KATIA AUTO SALES &amp; REPAIRS'),
+    'Email header must uppercase shop name',
+  );
+
+  const plainFromHeader = htmlToPlainText(
+    `<div>${emailHeader}<p>Hello Customer</p></div>`,
+  );
+  assert.ok(
+    !plainFromHeader.includes('<svg'),
+    'Plain text converter must strip SVG tags',
+  );
+  assert.ok(
+    plainFromHeader.includes('Hello Customer'),
+    'Plain text converter must preserve email body text',
+  );
+
+  // Test 5.4: Receipt HTML integration with Nut Ring mark
+  const sampleReceipt = receiptModule.receiptHtml(
+    {
+      id: 'ord-1',
+      orderNumber: 'RO-00999',
+      customerName: 'Elena Vargas',
+      phone: '(630) 555-0100',
+      address: '100 Main St',
+      vehicleYear: '2020',
+      vehicleMake: 'Honda',
+      vehicleModel: 'Civic',
+      vin: '2HGFC2F69LH000001',
+      licensePlate: 'ELENA-1',
+      mileage: '50,000',
+      dateIn: '2026-11-01',
+      datePromised: '2026-11-03',
+      concerns: 'Bumper repair',
+      charges: [],
+      createdAt: '2026-11-01T12:00:00Z',
+      total: 0,
+    },
+    {
+      shopName: 'KATIA Auto & Body <Custom>',
+      shopAddress: '1005 Rural St, Aurora, IL 60505',
+      shopPhone: '(630) 907-7198',
+    },
+  );
+  assert.ok(
+    sampleReceipt.includes('<div class="brand-lockup">'),
+    'Receipt header must contain .brand-lockup container',
+  );
+  assert.ok(
+    sampleReceipt.includes('class="brand-logo"'),
+    'Receipt header must embed .brand-logo Nut Ring SVG',
+  );
+  assert.ok(
+    sampleReceipt.includes('&lt;Custom&gt;'),
+    'Receipt header must escape special characters in custom shopName',
+  );
+  // Test 5.5: Additional work is itemized and the revised total leads
+  const revisedReceipt = receiptModule.receiptHtml({
+    id: 'ord-2',
+    orderNumber: 'RO-01000',
+    customerName: 'Elena Vargas',
+    dateIn: '2026-10-28',
+    charges: [{ kind: 'parts', description: 'Bumper', amount: '100' }],
+    revisedCharges: [
+      { kind: 'labor', description: 'Install headlamp', amount: '50' },
+    ],
+    createdAt: '2026-11-01T12:00:00Z',
+    total: 0,
+  });
+  assert.ok(
+    revisedReceipt.includes('Install headlamp'),
+    'Receipt must itemize additional work lines',
+  );
+  assert.ok(
+    /<label>Revised total<\/label>\s*<strong>\$150\.00<\/strong>/.test(
+      revisedReceipt,
+    ),
+    'Receipt must lead with the revised total',
+  );
+  assert.ok(
+    revisedReceipt.includes('Oct 28, 2026'),
+    'Receipt must show readable dates',
+  );
+
+  // Test 5.6: Receipt style setting picks the layout, defaulting to modern
+  const styledReceipt = (receiptStyle) =>
+    receiptModule.receiptHtml(
+      {
+        id: 'ord-3',
+        orderNumber: 'RO-01001',
+        charges: [],
+        createdAt: '2026-11-01T12:00:00Z',
+        total: 0,
+      },
+      { receiptStyle },
+    );
+  assert.ok(styledReceipt(undefined).includes('size: letter portrait'));
+  assert.ok(styledReceipt('modern').includes('size: letter portrait'));
+  assert.ok(styledReceipt('classic').includes('size: letter landscape'));
+
+  console.log(
+    '✓ Nut Ring SVG suite, receipt header, and email brand header verified',
+  );
+}
+
 console.log('--- ALL GMAIL INTEGRATION TESTS PASSED (100% SUCCESS) ---');

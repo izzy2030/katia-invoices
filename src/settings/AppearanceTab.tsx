@@ -70,11 +70,10 @@ export default function AppearanceTab({
                     <IconComponent size={20} />
                   </div>
                   <div className="settings-theme-dots">
-                    {theme.colors.map((c, i) => (
+                    {theme.colors.map((_, i) => (
                       <div
                         key={i}
-                        className="theme-dot"
-                        style={{ backgroundColor: c }}
+                        className={`theme-dot theme-dot-${theme.id}-${i}`}
                       />
                     ))}
                   </div>
@@ -96,16 +95,12 @@ export default function AppearanceTab({
         <div className="settings-theme-preview-box">
           <div className="settings-theme-preview-left">
             <div className="settings-theme-preview-badge">Active Theme</div>
-            <div>
-              <strong style={{ display: 'block', fontSize: 14 }}>
-                {activeThemeObj.name}
-              </strong>
-              <small style={{ color: 'var(--muted)', fontSize: 12 }}>
-                {activeThemeObj.desc}
-              </small>
+            <div className="settings-theme-preview-meta">
+              <strong>{activeThemeObj.name}</strong>
+              <small>{activeThemeObj.desc}</small>
             </div>
           </div>
-          <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+          <span className="settings-theme-preview-note">
             Changes apply instantaneously
           </span>
         </div>

@@ -107,7 +107,7 @@ export function startLoopbackServer(
             <html>
               <head><title>Authentication Cancelled</title></head>
               <body style="font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; height: 90vh; background: #f8fafc; color: #1e293b;">
-                <div style="background: white; padding: 40px; border-radius: 16px; border: 1px solid #e2e8f0; max-width: 460px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
+                <div style="background: white; padding: 40px; border-radius: 12px; border: 1px solid #e2e8f0; max-width: 460px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
                   <div style="font-size: 40px; margin-bottom: 16px;">✕</div>
                   <h2 style="margin: 0 0 10px; color: #dc2626;">Google Authorization Cancelled</h2>
                   <p style="color: #64748b; font-size: 14px; line-height: 1.5;">${encodeURIComponent(error)}</p>
@@ -128,7 +128,7 @@ export function startLoopbackServer(
             <html>
               <head><title>Invalid State</title></head>
               <body style="font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; height: 90vh; background: #f8fafc; color: #1e293b;">
-                <div style="background: white; padding: 40px; border-radius: 16px; border: 1px solid #e2e8f0; max-width: 460px; text-align: center;">
+                <div style="background: white; padding: 40px; border-radius: 12px; border: 1px solid #e2e8f0; max-width: 460px; text-align: center;">
                   <h2 style="color: #dc2626;">Security Validation Failed</h2>
                   <p style="color: #64748b; font-size: 14px;">OAuth state token mismatch. Possible CSRF attempt.</p>
                 </div>
@@ -157,11 +157,11 @@ export function startLoopbackServer(
           <html>
             <head><title>Gmail Connected · Katia Invoices</title></head>
             <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 90vh; background: #f8fafc; color: #0f172a;">
-              <div style="background: white; padding: 40px 32px; border-radius: 20px; border: 1px solid #e2e8f0; max-width: 480px; text-align: center; box-shadow: 0 12px 30px rgba(0,0,0,0.06);">
-                <div style="width: 56px; height: 56px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #059669; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px;">✓</div>
+              <div style="background: white; padding: 40px 32px; border-radius: 12px; border: 1px solid #e2e8f0; max-width: 480px; text-align: center; box-shadow: 0 12px 30px rgba(0,0,0,0.06);">
+                <div style="width: 56px; height: 56px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #059669; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 28px;">✓</div>
                 <h2 style="margin: 0 0 8px; font-size: 22px; font-weight: 800;">Gmail Successfully Connected!</h2>
                 <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin: 0 0 24px;">Your Google account is now linked to Katia Invoices. You can now send official estimates and invoices directly through your Gmail account.</p>
-                <div style="padding: 12px; background: #f1f5f9; border-radius: 10px; font-size: 13px; font-weight: 600; color: #475569;">You can safely close this browser window and return to the application.</div>
+                <div style="padding: 12px; background: #f1f5f9; border-radius: 8px; font-size: 13px; font-weight: 600; color: #475569;">You can safely close this browser window and return to the application.</div>
               </div>
             </body>
           </html>

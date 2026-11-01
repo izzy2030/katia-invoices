@@ -145,3 +145,9 @@ vite.config.ts.timestamp-*
 # Electron-Forge
 out/
 .cache/
+
+# SQLite databases
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db

@@ -11,6 +11,8 @@ type WorkOrderInput = import('./workOrder').WorkOrderInput;
 type WorkOrder = import('./workOrder').WorkOrder;
 type WorkOrderStatus = import('./workOrder').WorkOrderStatus;
 type CustomerContact = import('./customerHistory').CustomerContact;
+type BackupImportMode = import('./backupService').BackupImportMode;
+type BackupImportResult = import('./backupService').BackupImportResult;
 
 interface Window {
   repairDesk: {
@@ -29,6 +31,13 @@ interface Window {
     ) => Promise<{ saved: boolean; filePath?: string } | boolean>;
     openPath: (targetPath: string) => Promise<boolean>;
     exportBackupJson: () => Promise<boolean>;
+    exportBackupSqlite: () => Promise<boolean>;
+    importBackup: (mode?: BackupImportMode) => Promise<BackupImportResult>;
+    getDatabaseInfo: () => Promise<{
+      dbPath: string;
+      dbFileName: string;
+      dbFolder: string;
+    }>;
     exportOrdersCsv: () => Promise<boolean>;
     getDashboardPreferences: () => Promise<
       import('./workOrder').DashboardPreferences
@@ -73,5 +82,18 @@ interface Window {
       subject: string;
       personalNote?: string;
     }) => Promise<{ success: boolean; messageId: string; senderEmail: string }>;
+    platform: string;
+    setTitleBarOverlay: (options: {
+      color: string;
+      symbolColor: string;
+      height?: number;
+    }) => Promise<boolean>;
+    minimizeWindow: () => Promise<boolean>;
+    toggleMaximizeWindow: () => Promise<boolean>;
+    closeWindow: () => Promise<boolean>;
+    isWindowMaximized: () => Promise<boolean>;
+    onWindowMaximizedChange: (
+      callback: (maximized: boolean) => void,
+    ) => () => void;
   };
 }

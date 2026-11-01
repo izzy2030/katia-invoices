@@ -75,6 +75,11 @@ export function htmlToPlainText(html: string): string {
   return html
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<svg[^>]*>[\s\S]*?<\/svg>/gi, '')
+    .replace(
+      /<div[^>]*data-email-fallback=["']true["'][^>]*>[\s\S]*?<\/div>/gi,
+      '',
+    )
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n\n')
     .replace(/<\/tr>/gi, '\n')

@@ -1,3 +1,6 @@
+import { katiaHexBadgeSvg } from './logo';
+import { classicReceiptHtml } from './receiptClassic';
+import { MANROPE_WOFF2_BASE64 } from './receiptFont';
 import {
   chargeTotals,
   defaultLegacy,
@@ -8,11 +11,18 @@ import {
   normalizeInput,
   otherChargesTotal,
   supplementTotals,
+  type ChargeLine,
   type WorkOrder,
   type TaxSettings,
 } from './workOrder';
 
 export function receiptHtml(raw: WorkOrder, settings?: TaxSettings) {
+  return settings?.receiptStyle === 'classic'
+    ? classicReceiptHtml(raw, settings)
+    : modernReceiptHtml(raw, settings);
+}
+
+function modernReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
   const order = { ...raw, ...normalizeInput(raw) };
   const details = { ...defaultLegacy, ...order.legacy };
   const e = (value: unknown) =>
@@ -29,57 +39,146 @@ export function receiptHtml(raw: WorkOrder, settings?: TaxSettings) {
     );
   const money = (value: number) =>
     value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-  const field = (label: string, value: unknown) =>
-    `<div class="field"><label>${e(label)}</label><div>${e(value) || '—'}</div></div>`;
+  const date = (value: string | undefined) => {
+    const match = value?.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return value?.trim() ?? '';
+    return new Date(
+      Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
+    ).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC',
+    });
+  };
+  const fact = (label: string, value: unknown, className = '') =>
+    String(value ?? '').trim()
+      ? `<div class="fact ${className}"><label>${e(label)}</label><div>${e(value)}</div></div>`
+      : '';
+
   const totals = chargeTotals(order);
-  const otherTotal = otherChargesTotal(totals);
   const taxLabel = order.taxRate?.trim()
     ? `Tax (${order.taxRate.trim()}%)`
     : 'Tax';
-  const rows = (parts: boolean) =>
-    order.charges
-      .filter(
-        (line) =>
-          (line.kind === 'parts') === parts &&
-          (line.description || line.amount),
-      )
-      .map(
-        (line) =>
-          `<tr><td>${e(line.quantity || '1')}</td><td>${e(line.partNumber)}</td><td>${e(line.description)}${!parts ? `<small>${e(line.kind)}</small>` : ''}</td><td class="amount">${line.unitPrice ? money(Number(line.unitPrice)) : '—'}</td><td class="tax-cell">${(line.taxable ?? defaultTaxable(line.kind)) ? 'Tax' : '—'}</td><td class="amount">${money(lineTotal(line))}</td></tr>`,
-      )
-      .join('') || '<tr><td colspan="6">—</td></tr>';
-  const table = (title: string, parts: boolean) =>
-    `<section><h2>${title}</h2><table class="lines"><thead><tr><th>Qty</th><th>Part no.</th><th>Description</th><th>Unit</th><th>Tax</th><th>Amount</th></tr></thead><tbody>${rows(parts)}</tbody></table></section>`;
+
+  const hasContent = (line: ChargeLine) => line.description || line.amount;
+  const lineRow = (line: ChargeLine) => {
+    const taxable = line.taxable ?? defaultTaxable(line.kind);
+    const showKind = line.kind !== 'parts' && line.kind !== 'labor';
+    return `<tr class="line">
+      <td class="qty">${e(line.quantity || '1')}</td>
+      <td class="item">${e(line.description)}${line.partNumber ? `<small class="mono">${e(line.partNumber)}</small>` : ''}${showKind ? `<span class="kind">${e(line.kind)}</span>` : ''}</td>
+      <td class="num">${line.unitPrice ? money(Number(line.unitPrice)) : ''}</td>
+      <td class="tax">${taxable ? 'Tax' : ''}</td>
+      <td class="num amount">${money(lineTotal(line))}</td>
+    </tr>`;
+  };
+  const lineGroup = (
+    title: string,
+    note: string,
+    lines: ChargeLine[],
+    total: number,
+    detail = '',
+  ) =>
+    lines.length
+      ? `<tbody>
+          <tr class="group"><td colspan="4">${e(title)}${note ? `<small>${e(note)}</small>` : ''}</td><td class="num">${money(total)}</td></tr>
+          ${detail ? `<tr class="group-detail"><td></td><td colspan="4">${e(detail)}</td></tr>` : ''}
+          ${lines.map(lineRow).join('')}
+        </tbody>`
+      : '';
+
+  const partLines = order.charges.filter(
+    (line) => line.kind === 'parts' && hasContent(line),
+  );
+  const laborLines = order.charges.filter(
+    (line) => line.kind !== 'parts' && hasContent(line),
+  );
+  const supplementLines = (order.revisedCharges ?? []).filter(hasContent);
+
   const supplement = supplementTotals(order);
   const hasSupplement = hasSupplementLines(order);
-  const revisedEstimate =
-    Math.round((totals.total + supplement.total) * 100) / 100;
-  const supplementRows =
-    (order.revisedCharges ?? [])
-      .filter(
-        (line) =>
-          line.description || line.partNumber || line.amount || line.unitPrice,
-      )
-      .map(
-        (line) =>
-          `<tr><td>${e(line.quantity || '1')}</td><td>${e(line.partNumber)}</td><td>${e(line.description)}<small>${e(line.kind)}</small></td><td class="amount">${line.unitPrice ? money(Number(line.unitPrice)) : '—'}</td><td class="tax-cell">${(line.taxable ?? defaultTaxable(line.kind)) ? 'Tax' : '—'}</td><td class="amount">${money(lineTotal(line))}</td></tr>`,
-      )
-      .join('') || '<tr><td colspan="6">—</td></tr>';
-  const supplementTable = `<table class="lines supplement"><thead><tr><th>Qty</th><th>Part no.</th><th>Description</th><th>Unit</th><th>Tax</th><th>Amount</th></tr></thead><tbody>${supplementRows}</tbody></table>`;
-  const approval = (prefix: 'estimate' | 'revised', title: string) => {
-    const get = (suffix: string) =>
-      (details as Record<string, string>)[prefix + suffix] || '';
-    const authorization = `<div class="grid two">${field('Authorized by', get('AuthorizedBy'))}${field('Authorization method', get('Method'))}</div><div class="grid four">${field('Date', get('Date'))}${field('Time', get('Time'))}${field('Called by', get('CalledBy'))}${field('Phone', get('Phone'))}</div>`;
-    if (prefix === 'estimate')
-      return `<section class="approval"><h2>${title}</h2><div class="grid five">${field('Parts', money(totals.parts))}${field('Labor', money(totals.labor))}${field('Other charges', money(otherTotal))}${field(taxLabel, money(totals.tax))}${field('Total', money(totals.total))}</div>${authorization}</section>`;
-    if (hasSupplement)
-      return `<section class="approval"><h2>${title}</h2>${field('Additional work', details.revisedDescription)}${supplementTable}<div class="grid five">${field('Additional parts', money(supplement.parts))}${field('Additional labor', money(supplement.labor))}${field('Other charges', money(otherChargesTotal(supplement)))}${field(taxLabel, money(supplement.tax))}${field('Additional total', money(supplement.total))}</div><div class="grid two">${field('Original estimate', money(totals.total))}${field('Revised estimate', money(revisedEstimate))}</div>${authorization}</section>`;
-    const parts = moneyValue(get('Parts')),
-      labor = moneyValue(get('Labor')),
-      additional = Math.round((parts + labor) * 100) / 100,
-      revised = parts || labor;
-    return `<section class="approval"><h2>${title}</h2>${field('Additional work', details.revisedDescription)}<div class="grid five">${field('Additional parts', parts ? money(parts) : '')}${field('Additional labor', labor ? money(labor) : '')}${field('Additional total', revised ? money(additional) : '')}${field('Original estimate', money(totals.total))}${field('Revised estimate', revised ? money(totals.total + additional) : '')}</div>${authorization}</section>`;
+  const hasRevised =
+    hasSupplement ||
+    Boolean(
+      details.revisedParts ||
+      details.revisedLabor ||
+      details.revisedDescription ||
+      details.revisedAuthorizedBy,
+    );
+  const addlParts = hasSupplement
+    ? supplement.parts
+    : moneyValue(details.revisedParts);
+  const addlLabor = hasSupplement
+    ? supplement.labor
+    : moneyValue(details.revisedLabor);
+  const addlTotal = hasSupplement
+    ? supplement.total
+    : Math.round((addlParts + addlLabor) * 100) / 100;
+  const revisedTotal = Math.round((totals.total + addlTotal) * 100) / 100;
+  const finalTotal = hasRevised ? revisedTotal : totals.total;
+
+  const lineTable =
+    partLines.length || laborLines.length || supplementLines.length
+      ? `<table class="lines">
+          <thead><tr><th class="qty">Qty</th><th>Item</th><th class="num">Unit</th><th class="tax"></th><th class="num">Amount</th></tr></thead>
+          ${lineGroup('Parts', 'All parts new unless otherwise specified', partLines, totals.parts)}
+          ${lineGroup('Labor & services', '', laborLines, totals.labor + otherChargesTotal(totals))}
+          ${lineGroup('Additional work', 'Approved after the original estimate', supplementLines, addlTotal, details.revisedDescription)}
+        </table>`
+      : '';
+
+  const totalRow = (label: string, value: number, className = '') =>
+    `<tr class="${className}"><td>${e(label)}</td><td class="num">${money(value)}</td></tr>`;
+  const optionalRow = (label: string, value: number) =>
+    value ? totalRow(label, value) : '';
+
+  const authorization = (
+    title: string,
+    by: string,
+    method: string,
+    day: string,
+    time: string,
+    calledBy: string,
+    phone: string,
+  ) => {
+    const items = [
+      by ? `${e(by)}${method ? ` (${e(method)})` : ''}` : '',
+      [date(day), time].filter(Boolean).map(e).join(', '),
+      [calledBy, phone].filter(Boolean).map(e).join(' · '),
+    ].filter(Boolean);
+    return items.length
+      ? `<div class="auth"><label>${e(title)}</label><div>${items.join(' · ')}</div></div>`
+      : '';
   };
+  const authorizations = [
+    authorization(
+      'Estimate authorized',
+      details.estimateAuthorizedBy,
+      details.estimateMethod,
+      details.estimateDate,
+      details.estimateTime,
+      details.estimateCalledBy,
+      details.estimatePhone,
+    ),
+    hasRevised
+      ? authorization(
+          'Additional work authorized',
+          details.revisedAuthorizedBy,
+          details.revisedMethod,
+          details.revisedDate,
+          details.revisedTime,
+          details.revisedCalledBy,
+          details.revisedPhone,
+        )
+      : '',
+  ].join('');
+
+  const additionalNote =
+    hasRevised && !supplementLines.length
+      ? `<div class="note"><label>Additional work</label><p>${e(details.revisedDescription)}</p><div class="note-split">Parts ${money(addlParts)} · Labor ${money(addlLabor)}</div></div>`
+      : '';
+
   const policy = (text: string) =>
     e(
       text.replaceAll(
@@ -89,39 +188,295 @@ export function receiptHtml(raw: WorkOrder, settings?: TaxSettings) {
           : '________',
       ),
     );
-  const signature =
+
+  const hasDigitalSignature =
+    Boolean(details.signature) &&
     /^data:image\/(?:png|svg\+xml);base64,[A-Za-z0-9+/=]+$/.test(
       details.signature,
-    )
-      ? `<img class="signature" src="${details.signature}" alt="Customer signature">`
-      : '<div class="signature-blank"></div>';
+    );
+
   const shopNameHeader =
     settings?.shopName?.trim() || 'KATIA Auto Sales & Repairs Inc';
-  const shopNameWords = shopNameHeader.split(' ');
-  const shopBrandWord = shopNameWords[0] || 'KATIA';
-  const shopRestWords = shopNameWords.slice(1).join(' ');
   const shopAddressLine =
     settings?.shopAddress?.trim() || '1005 Rural St, Aurora, IL 60505';
   const shopPhoneLine = settings?.shopPhone?.trim() || '(630) 907-7198';
+  const logoSvg = katiaHexBadgeSvg({
+    size: 46,
+    variant: 'print',
+    className: 'brand-logo',
+  });
+
+  const vehicleName = [order.vehicleYear, order.vehicleMake, order.vehicleModel]
+    .filter(Boolean)
+    .join(' ');
+  const vehicleFacts = [
+    order.vin,
+    order.licensePlate,
+    order.mileage ? `${order.mileage} mi` : '',
+  ]
+    .filter(Boolean)
+    .map(e)
+    .join('<i></i>');
+  const cityLine = [
+    [details.city, details.state].filter(Boolean).join(', '),
+    details.zip,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const phones = [
+    [order.phone, details.phoneExtension].filter(Boolean).join(' ext. '),
+    details.homePhone ? `${details.homePhone} home` : '',
+  ].filter(Boolean);
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>${e(order.orderNumber)}</title><style>
-  @page{size:letter landscape;margin:.35in}*{box-sizing:border-box}body{margin:0;font:12px/1.45 Arial,sans-serif;color:#17243b}header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #2563eb;padding-bottom:8px;margin-bottom:10px}.brand{font-size:26px;font-weight:800;letter-spacing:.08em}.number{text-align:right;font-size:14px;font-weight:bold}small{display:block;font-size:10px;color:#526176;margin-top:2px}.grid{display:grid;gap:0}.two{grid-template-columns:1fr 1fr}.three{grid-template-columns:repeat(3,1fr)}.four{grid-template-columns:repeat(4,1fr)}.five{grid-template-columns:repeat(5,1fr)}.field{padding:5px 6px;border:1px solid #cbd5e1;min-width:0;overflow-wrap:anywhere;white-space:pre-wrap}.field label{display:block;color:#526176;text-transform:uppercase;font-size:10px;margin-bottom:3px}.layout{display:grid;grid-template-columns:1fr 1.4fr;gap:10px}.stack{display:grid;gap:10px;align-content:start}h2{margin:0;background:#eef3fa;padding:5px 6px;font-size:11px;text-transform:uppercase;border:1px solid #cbd5e1}table{width:100%;border-collapse:collapse}th,td{border:1px solid #cbd5e1;padding:5px;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{font-size:10px;color:#526176}.lines th:nth-child(1){width:6%}.lines th:nth-child(2){width:16%}.lines th:nth-child(4){width:10%}.lines th:nth-child(5){width:7%}.lines th:last-child{width:14%}.amount{text-align:right;white-space:nowrap}.tax-cell{text-align:center;white-space:nowrap}.totals{margin-left:auto;width:100%}.totals td:last-child{text-align:right}.grand{font-weight:bold;font-size:16px;background:#eef3fa}.policies{font-size:10px;line-height:1.4;white-space:pre-wrap;padding:8px;border:1px solid #cbd5e1}.policies p{margin:0 0 7px}.signature{height:50px;max-width:100%;object-fit:contain;object-position:left}.signature-blank{height:40px;border-bottom:1px solid #64748b}tr{break-inside:avoid}section,.approval{break-inside:auto}.supplement{margin:6px 0}thead{display:table-header-group}
-  </style></head><body><header><div><div class="brand">${e(shopBrandWord)}</div>${e(shopRestWords)}<small>${e(shopAddressLine)} · Tel: ${e(shopPhoneLine)}</small></div><div class="number">REPAIR ORDER ${e(order.orderNumber)}<small>Date in: ${e(order.dateIn)} · Date promised: ${e(order.datePromised) || '—'}</small></div></header>
-  <div class="layout"><div class="stack">${table('Parts (all parts new unless otherwise specified)', true)}<div class="policies"><p>${policy(details.noticeEnglish)}</p><p lang="es">${policy(details.noticeSpanish)}</p><p>${e(details.authorizationText)}</p>${signature}<div class="grid two">${field('Customer signature / date', details.signatureDate)}${field('Save old parts', details.saveOldParts || 'Not specified')}</div>${field('Special-order deposit', details.depositAmount ? money(Number(details.depositAmount)) : '')}</div></div>
-  <div class="stack"><section><div class="grid two">${field('Customer name', order.customerName)}${field('Customer order no.', details.customerOrderNumber)}${field('Written by', details.writtenBy)}${field('Business phone / ext.', [order.phone, details.phoneExtension].filter(Boolean).join(' ext. '))}${field('Address', order.address)}${field('Home phone', details.homePhone)}</div><div class="grid three">${field('City', details.city)}${field('State', details.state)}${field('ZIP', details.zip)}</div><div class="grid two">${field('Year, make and model', [order.vehicleYear, order.vehicleMake, order.vehicleModel].filter(Boolean).join(' '))}${field('Serial no. / VIN', order.vin)}${field('License no.', order.licensePlate)}${field('Mileage', order.mileage)}${field('Call when ready', details.callWhenReady || 'Not specified')}${field('Mechanic / technician', details.technician)}</div>${field('Terms', details.terms)}${field('Services requested / description of work', order.concerns)}</section>${table('Labor / services / other charges', false)}${approval('estimate', 'Estimated costs and authorization')}${approval('revised', 'Revised estimate / additional work')}<table class="totals">${[
-    ['Total labor', totals.labor],
-    ['Total parts', totals.parts],
-    ['Total sublet', totals.sublet],
-    ['Gas, oil and grease', totals.fluids],
-    ['EPA / waste disposal', totals.disposal],
-    ['Other', totals.other],
-    [taxLabel, totals.tax],
-  ]
-    .map(
-      ([label, value]) =>
-        `<tr><td>${label}</td><td>${money(Number(value))}</td></tr>`,
-    )
-    .join(
-      '',
-    )}<tr class="grand"><td>ESTIMATE TOTAL</td><td>${money(totals.total)}</td></tr></table></div></div></body></html>`;
+  @font-face {
+    font-family: Manrope;
+    font-weight: 200 800;
+    src: url(data:font/woff2;base64,${MANROPE_WOFF2_BASE64}) format('woff2');
+  }
+  @page { size: letter portrait; margin: 0.35in 0.5in; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    font: 500 8.5pt/1.4 Manrope, "Segoe UI", Arial, sans-serif;
+    color: #0f172a;
+    background: #ffffff;
+  }
+  label {
+    display: block;
+    color: #64748b;
+    font-size: 6.5pt;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    line-height: 1.3;
+    margin-bottom: 2pt;
+    text-transform: uppercase;
+  }
+  p { margin: 0; }
+  .mono { font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; font-weight: 400; }
+  .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  header { display: flex; justify-content: space-between; align-items: center; gap: 18pt; }
+  .brand-lockup { display: flex; align-items: center; gap: 9pt; min-width: 0; }
+  .brand-logo { width: 30pt; height: 30pt; flex-shrink: 0; display: block; }
+  .brand-text { min-width: 0; }
+  .brand { font-size: 12.5pt; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; }
+  .shop-sub { color: #64748b; font-size: 8pt; line-height: 1.35; }
+  .number { flex-shrink: 0; text-align: right; }
+  .number label { margin-bottom: 0; }
+  .number div { font-size: 12.5pt; font-weight: 800; letter-spacing: -0.01em; line-height: 1.3; }
+
+  .hero {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 22pt;
+    margin-top: 10pt;
+  }
+  .hero-main { flex: 1; min-width: 0; align-self: center; }
+  .vehicle { font-size: 22pt; font-weight: 800; letter-spacing: -0.03em; line-height: 1.08; }
+  .vehicle-facts { color: #475569; font-size: 8pt; margin-top: 6pt; overflow-wrap: anywhere; }
+  .vehicle-facts i { display: inline-block; width: 2.5pt; height: 2.5pt; margin: 0 6pt 1.5pt; border-radius: 50%; background: #94a3b8; }
+  .total-card {
+    background: #0f172a;
+    border-radius: 9pt;
+    color: #ffffff;
+    flex-shrink: 0;
+    min-width: 186pt;
+    padding: 8pt 14pt 7pt;
+  }
+  .total-card label { color: #93c5fd; margin-bottom: 3pt; }
+  .total-card strong { display: block; font-size: 21pt; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .total-card small { display: block; color: #cbd5e1; font-size: 7.5pt; line-height: 1.35; margin-top: 5pt; }
+
+  .facts {
+    display: grid;
+    grid-template-columns: 2.3fr repeat(4, 1fr);
+    gap: 6pt 12pt;
+    margin-top: 10pt;
+    padding: 7pt 0;
+    border-top: 1pt solid #0f172a;
+    border-bottom: 0.75pt solid #e2e8f0;
+  }
+  .fact { min-width: 0; overflow-wrap: anywhere; }
+  .fact > div { font-weight: 600; line-height: 1.35; }
+  .fact-customer { grid-row: span 2; }
+  .fact-wide { grid-column: span 2; }
+  .fact-customer span { display: block; color: #475569; font-size: 7.5pt; font-weight: 500; line-height: 1.3; }
+  .request { margin-top: 6pt; }
+  .request p { font-weight: 600; line-height: 1.4; }
+
+  .lines { width: 100%; border-collapse: collapse; margin-top: 8pt; }
+  .lines thead { display: table-header-group; }
+  .lines th {
+    color: #64748b;
+    font-size: 6.5pt;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    padding: 0 0 4pt;
+    text-align: left;
+    text-transform: uppercase;
+  }
+  .lines th.num { text-align: right; }
+  .lines td { padding: 1.6pt 0; vertical-align: top; }
+  .lines .qty { width: 30pt; color: #64748b; font-variant-numeric: tabular-nums; }
+  .lines .num { width: 66pt; padding-left: 8pt; }
+  .lines .tax { width: 26pt; color: #64748b; font-size: 6.5pt; text-align: right; padding-top: 2.4pt; }
+  .lines tbody { break-inside: auto; }
+  .lines tr { break-inside: avoid; }
+  .group td {
+    border-top: 1pt solid #0f172a;
+    font-size: 9pt;
+    font-weight: 800;
+    padding: 3pt 0 2pt;
+  }
+  .group small { color: #64748b; font-size: 7.5pt; font-weight: 500; margin-left: 7pt; }
+  .line + .line td { border-top: 0.75pt solid #e2e8f0; }
+  .item { font-weight: 600; overflow-wrap: anywhere; }
+  .item small { color: #64748b; font-size: 7pt; margin-left: 6pt; white-space: nowrap; }
+  .group-detail td { color: #475569; font-size: 7.5pt; line-height: 1.35; padding-top: 0; }
+  .kind {
+    color: #64748b;
+    font-size: 6.5pt;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-left: 6pt;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .amount { font-weight: 700; }
+  .no-lines { color: #64748b; margin-top: 16pt; padding: 12pt 0; border-top: 1pt solid #0f172a; }
+
+  .summary {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 26pt;
+    margin-top: 5pt;
+    padding-top: 6pt;
+    border-top: 1pt solid #0f172a;
+    }
+  .closing { break-inside: avoid; }
+  .summary-notes { flex: 1; min-width: 0; display: grid; gap: 7pt; }
+  .note p, .auth > div { font-size: 7.5pt; line-height: 1.4; }
+  .note-split { color: #475569; font-size: 7.5pt; font-variant-numeric: tabular-nums; margin-top: 2pt; }
+  .totals { width: 186pt; flex-shrink: 0; border-collapse: collapse; }
+  .totals td { color: #475569; font-size: 7.5pt; line-height: 1.3; padding: 1pt 0; }
+  .totals .num { color: #0f172a; font-weight: 600; }
+  .totals .step td { border-top: 0.75pt solid #e2e8f0; color: #0f172a; font-weight: 700; padding-top: 3pt; }
+  .totals .grand td { border-top: 1pt solid #0f172a; color: #0f172a; font-size: 11pt; font-weight: 800; padding-top: 5pt; }
+
+  .legal { margin-top: 6pt; padding-top: 6pt; border-top: 0.75pt solid #e2e8f0; }
+  .notices { display: grid; grid-template-columns: 1fr 1fr; gap: 16pt; }
+  .legal p { color: #475569; font-size: 6.3pt; line-height: 1.38; }
+  .legal .auth-text { margin-top: 4pt; }
+  .sign-row { display: flex; gap: 16pt; align-items: flex-end; margin-top: 4pt; }
+  .sign-main { flex: 1; min-width: 0; }
+  .sign-date { width: 96pt; flex-shrink: 0; }
+  .sign-line { display: flex; align-items: flex-end; min-height: 21pt; padding-bottom: 2pt; border-bottom: 1pt solid #0f172a; font-weight: 600; }
+  .sign-mark { color: #64748b; font-size: 9pt; font-weight: 700; margin-right: 6pt; }
+  .signature { height: 34pt; max-width: 100%; object-fit: contain; object-position: left; margin-bottom: -2pt; }
+  .sign-row label { margin: 3pt 0 0; }
+  .sign-options { flex-shrink: 0; width: 150pt; font-size: 7.5pt; line-height: 1.5; }
+  .option-label { color: #64748b; font-size: 6.5pt; font-weight: 700; letter-spacing: 0.09em; margin-right: 7pt; text-transform: uppercase; }
+  .choice { display: inline-flex; align-items: center; gap: 3pt; line-height: 9pt; margin-right: 9pt; font-weight: 600; vertical-align: top; }
+  .box { display: inline-flex; align-items: center; justify-content: center; width: 9pt; height: 9pt; border: 0.75pt solid #0f172a; border-radius: 2pt; font-size: 7pt; font-weight: 800; line-height: 1; overflow: hidden; }
+  .deposit { margin-top: 2pt; color: #475569; }
+  </style></head><body>
+    <header>
+      <div class="brand-lockup">
+        ${logoSvg}
+        <div class="brand-text">
+          <div class="brand">${e(shopNameHeader)}</div>
+          <div class="shop-sub">${e(shopAddressLine)} · ${e(shopPhoneLine)}</div>
+        </div>
+      </div>
+      <div class="number">
+        <label>Repair order</label>
+        <div>${e(order.orderNumber)}</div>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-main">
+        <div class="vehicle">${e(vehicleName) || 'Vehicle not specified'}</div>
+        ${vehicleFacts ? `<div class="vehicle-facts mono">${vehicleFacts}</div>` : ''}
+      </div>
+      <div class="total-card">
+        <label>${hasRevised ? 'Revised total' : 'Estimate total'}</label>
+        <strong>${money(finalTotal)}</strong>
+        <small>${hasRevised ? `Original ${money(totals.total)} + additional ${money(addlTotal)}` : `Includes ${e(taxLabel.toLowerCase())}`}</small>
+      </div>
+    </section>
+
+    <section class="facts">
+      <div class="fact fact-customer">
+        <label>Customer</label>
+        <div>${e(order.customerName) || 'Not specified'}</div>
+        ${[
+          [order.address, cityLine].filter(Boolean).join(', '),
+          phones.join(' · '),
+        ]
+          .filter(Boolean)
+          .map((value) => `<span>${e(value)}</span>`)
+          .join('')}
+      </div>
+      ${fact('Date in', date(order.dateIn))}
+      ${fact('Promised', date(order.datePromised))}
+      ${fact('Written by', details.writtenBy)}
+      ${fact('Technician', details.technician)}
+      ${fact('Customer order', details.customerOrderNumber)}
+      ${fact('Call when ready', details.callWhenReady)}
+      ${fact('Terms', details.terms, 'fact-wide')}
+    </section>
+
+    ${order.concerns ? `<section class="request"><label>Services requested</label><p>${e(order.concerns)}</p></section>` : ''}
+
+    ${lineTable || '<div class="no-lines">No parts or labor have been added to this order.</div>'}
+
+    <div class="closing">
+    <section class="summary">
+      <div class="summary-notes">
+        ${additionalNote}
+        ${authorizations}
+      </div>
+      <table class="totals">
+        ${totalRow('Labor', totals.labor)}
+        ${totalRow('Parts', totals.parts)}
+        ${optionalRow('Other charges', otherChargesTotal(totals))}
+        ${totalRow(taxLabel, totals.tax)}
+        ${hasRevised ? totalRow('Estimate total', totals.total, 'step') + totalRow('Additional work', addlTotal) : ''}
+        ${totalRow(hasRevised ? 'Revised total' : 'Estimate total', finalTotal, 'grand')}
+      </table>
+    </section>
+
+    <section class="legal">
+      <div class="notices">
+        <p>${policy(details.noticeEnglish)}</p>
+        <p lang="es">${policy(details.noticeSpanish)}</p>
+      </div>
+      <p class="auth-text">${e(details.authorizationText)}</p>
+      <div class="sign-row">
+        <div class="sign-main">
+          <div class="sign-line">
+            <span class="sign-mark">X</span>
+            ${hasDigitalSignature ? `<img class="signature" src="${details.signature}" alt="Customer signature">` : ''}
+          </div>
+          <label>Customer signature</label>
+        </div>
+        <div class="sign-date">
+          <div class="sign-line">${e(date(details.signatureDate))}</div>
+          <label>Date</label>
+        </div>
+        <div class="sign-options">
+          <span class="option-label">Save old parts</span>
+          <span class="choice"><span class="box">${details.saveOldParts === 'Yes' ? '✓' : ''}</span>Yes</span>
+          <span class="choice"><span class="box">${details.saveOldParts === 'No' ? '✓' : ''}</span>No</span>
+          ${details.depositAmount ? `<div class="deposit">Special order deposit ${money(Number(details.depositAmount))}</div>` : ''}
+        </div>
+      </div>
+    </section>
+    </div>
+  </body></html>`;
 }
