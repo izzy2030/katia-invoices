@@ -53,6 +53,7 @@ import { randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import nodemailer, { type SendMailOptions } from 'nodemailer';
 import started from 'electron-squirrel-startup';
+import { updateElectronApp, UpdateSourceType } from 'update-electron-app';
 
 let database: DatabaseSync;
 let databaseFilePath = '';
@@ -1456,6 +1457,21 @@ if (started) app.quit();
 
 if (process.platform === 'win32') {
   app.setAppUserModelId('com.katia.bodyshop');
+}
+
+if (app.isPackaged) {
+  try {
+    updateElectronApp({
+      updateSource: {
+        type: UpdateSourceType.ElectronPublicUpdateService,
+        repo: 'izzy2030/katia-invoices',
+      },
+      updateInterval: '1 hour',
+      logger: console,
+    });
+  } catch (error) {
+    console.error('Failed to initialize auto-updater:', error);
+  }
 }
 
 function getAppIconPath(): string | undefined {
