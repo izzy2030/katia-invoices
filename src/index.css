@@ -2446,6 +2446,39 @@ button:focus-visible {
   transform: translateX(0);
 }
 
+.vehicle-option-item.highlighted {
+  background: var(--surface-hover);
+  border-left: 3px solid var(--accent);
+}
+
+.vehicle-option-item.highlighted .vehicle-option-icon {
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+.vehicle-option-item.highlighted .vehicle-select-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.autofill-customer-only-btn.highlighted {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.customer-group-header.highlighted {
+  background: var(--surface-hover);
+  border-left: 3px solid var(--accent);
+}
+
+.customer-select-hint {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+}
+
 .customers-panel {
   align-items: start;
   display: grid;
