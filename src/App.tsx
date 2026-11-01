@@ -1,5 +1,6 @@
 import ChargeRows from './ChargeRows';
 import CustomersView from './Customers';
+import CustomerAutofillSearch from './CustomerAutofillSearch';
 import KatiaLogo from './KatiaLogo';
 import LegacyFields from './LegacyFields';
 import SettingsView, { type SettingsTab } from './SettingsView';
@@ -543,12 +544,10 @@ function App() {
     setCreating(true);
   }
 
-  function autofillFromHistory(value: string) {
-    if (!value) return;
-    const [customerIndex, vehicleIndex] = value.split(':').map(Number);
-    const customer = customers[customerIndex];
-    if (!customer) return;
-    const vehicle = customer.vehicles[vehicleIndex];
+  function autofillFromCustomer(
+    customer: CustomerProfile,
+    vehicle?: CustomerVehicle,
+  ) {
     setForm((current) => ({
       ...current,
       customerKey: customer.key,
@@ -1227,46 +1226,10 @@ function App() {
                       </div>
                     </div>
                     {!editingId && !duplicateOf && customers.length > 0 && (
-                      <label className="field full-width history-autofill">
-                        <span>Autofill from history</span>
-                        <select
-                          aria-label="Autofill from a past repair order"
-                          value=""
-                          onChange={(event) =>
-                            autofillFromHistory(event.target.value)
-                          }
-                        >
-                          <option value="">
-                            Choose a past customer or vehicle…
-                          </option>
-                          {customers.map((customer, customerIndex) =>
-                            customer.vehicles.length ? (
-                              <optgroup
-                                key={customer.key}
-                                label={`${customer.name} — ${customer.phone || 'no phone'}`}
-                              >
-                                {customer.vehicles.map(
-                                  (vehicle, vehicleIndex) => (
-                                    <option
-                                      key={vehicle.key}
-                                      value={`${customerIndex}:${vehicleIndex}`}
-                                    >
-                                      {vehicle.label}
-                                    </option>
-                                  ),
-                                )}
-                              </optgroup>
-                            ) : (
-                              <option
-                                key={customer.key}
-                                value={`${customerIndex}:-1`}
-                              >
-                                {customer.name} (customer only)
-                              </option>
-                            ),
-                          )}
-                        </select>
-                      </label>
+                      <CustomerAutofillSearch
+                        customers={customers}
+                        onSelect={autofillFromCustomer}
+                      />
                     )}
                     <div className="form-grid">
                       <Field

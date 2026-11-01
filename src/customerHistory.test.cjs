@@ -93,6 +93,27 @@ for (const query of [
 assert.equal(filterCustomers(searchable, 'unmatched').length, 0);
 assert.equal(filterCustomers(searchable, '   '), searchable);
 assert.equal(filterCustomers(searchable, 'original name').length, 0);
+// Verify 5 most recent default limit and search filtering
+const testOrders = Array.from({ length: 8 }, (_, i) => ({
+  ...order,
+  id: `order-${i + 1}`,
+  orderNumber: `RO-0000${i + 1}`,
+  customerName: `Customer ${i + 1}`,
+  phone: `(630) 555-010${i + 1}`,
+  dateIn: `2026-10-0${i + 1}`,
+  createdAt: `2026-10-0${i + 1}T12:00:00Z`,
+}));
+const eightProfiles = customerProfiles(testOrders);
+assert.equal(eightProfiles.length, 8);
+const sortedProfiles = [...eightProfiles].sort((a, b) => {
+  const dateA = a.orders[0]?.dateIn || a.lastVisit || '';
+  const dateB = b.orders[0]?.dateIn || b.lastVisit || '';
+  return dateB.localeCompare(dateA);
+});
+assert.equal(sortedProfiles.slice(0, 5).length, 5);
+assert.equal(sortedProfiles.slice(0, 5)[0].name, 'Customer 8');
+assert.equal(sortedProfiles.slice(0, 5)[4].name, 'Customer 4');
+
 console.log(
   'Customer rename preserves contacts, vehicles, history, and historical order data.',
 );
