@@ -10,9 +10,13 @@ permissions:
   contents: write
 
 jobs:
-  release-windows:
-    name: Build & Publish Windows Installer
-    runs-on: windows-latest
+  release:
+    name: Build & Publish (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
 
     steps:
       - name: Checkout code

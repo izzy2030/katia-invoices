@@ -1,6 +1,7 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
+import { MakerDMG } from '@electron-forge/maker-dmg';
 import { PublisherGitHub } from '@electron-forge/publisher-github';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
@@ -23,6 +24,7 @@ const config: ForgeConfig = {
         'https://raw.githubusercontent.com/izzy2030/katia-invoices/master/assets/icon.ico',
     }),
     new MakerZIP({}, ['darwin']),
+    new MakerDMG({}, ['darwin']),
   ],
   publishers: [
     new PublisherGitHub({
@@ -33,6 +35,7 @@ const config: ForgeConfig = {
       prerelease: false,
       draft: false,
       generateReleaseNotes: true,
+      force: true,
     }),
   ],
   plugins: [
