@@ -1,8 +1,10 @@
 # Implementation Plan: Audit Remediation (Bug Fixes + Simplification)
 
-Status: **proposed — nothing implemented yet.**
+Status: **Phase 1 complete (`260863f`); Phase 2 implemented, pending commit.**
 Source: whole-repo `/ponytail-audit` of 2026-11-02 (23 over-engineering findings, 8 defects).
 Baseline: `npm run typecheck` exits 0, `npm test` passes 9/9, `npm run lint` clean (0 warnings, 0 errors).
+
+Phase 2 note: **2.4 was deliberately skipped.** `receiptFont.ts` is a 32 KB font payload, so inlining it into `receipt.ts` adds bulk without removing a layer. The other six items landed (−477 net lines, no dependency change).
 
 ---
 

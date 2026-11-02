@@ -13,10 +13,6 @@ import {
 } from 'lucide-react';
 import type { CatalogPreset, ChargeKind } from '../workOrder';
 
-interface PresetsTabProps {
-  onPresetsChanged?: () => void;
-}
-
 const CATEGORY_OPTIONS: Array<{ value: ChargeKind; label: string }> = [
   { value: 'labor', label: 'Labor / Operation' },
   { value: 'parts', label: 'Replacement Part' },
@@ -26,7 +22,7 @@ const CATEGORY_OPTIONS: Array<{ value: ChargeKind; label: string }> = [
   { value: 'other', label: 'Other / Misc' },
 ];
 
-export default function PresetsTab({ onPresetsChanged }: PresetsTabProps) {
+export default function PresetsTab() {
   const [presets, setPresets] = useState<CatalogPreset[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -115,7 +111,6 @@ export default function PresetsTab({ onPresetsChanged }: PresetsTabProps) {
       setEditingPreset(null);
       await fetchPresets();
       window.dispatchEvent(new CustomEvent('katia:presets-updated'));
-      onPresetsChanged?.();
     } catch (err: unknown) {
       setErrorMsg(
         err instanceof Error ? err.message : 'Failed to save preset.',
@@ -136,7 +131,6 @@ export default function PresetsTab({ onPresetsChanged }: PresetsTabProps) {
       showToast(`Deleted /${preset.shortcut}`);
       await fetchPresets();
       window.dispatchEvent(new CustomEvent('katia:presets-updated'));
-      onPresetsChanged?.();
     } catch (err) {
       console.error('Failed to delete preset:', err);
       alert('Could not delete preset.');
@@ -155,7 +149,6 @@ export default function PresetsTab({ onPresetsChanged }: PresetsTabProps) {
       setPresets(updated);
       showToast('Restored body shop default presets!');
       window.dispatchEvent(new CustomEvent('katia:presets-updated'));
-      onPresetsChanged?.();
     } catch (err) {
       console.error('Failed to reset presets:', err);
       alert('Could not reset presets.');

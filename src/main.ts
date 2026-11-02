@@ -462,8 +462,8 @@ function setWorkOrderStatus(id: string, status: string): WorkOrder {
     createdAt: row.created_at,
   };
   database
-    .prepare('UPDATE work_orders SET data_json = ? WHERE id = ?')
-    .run(JSON.stringify(updated), id);
+    .prepare('UPDATE work_orders SET status = ?, data_json = ? WHERE id = ?')
+    .run(status, JSON.stringify(updated), id);
   return updated;
 }
 
@@ -518,13 +518,14 @@ function saveWorkOrder(input: WorkOrderInput): WorkOrder {
   try {
     database
       .prepare(
-        'INSERT INTO work_orders (id, order_number, customer_name, vehicle, data_json, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO work_orders (id, order_number, customer_name, vehicle, status, data_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
       )
       .run(
         id,
         orderNumber,
         input.customerName.trim(),
         vehicle,
+        order.status ?? 'open',
         JSON.stringify(order),
         createdAt,
       );
@@ -575,11 +576,12 @@ function updateWorkOrder(id: string, input: WorkOrderInput): WorkOrder {
   };
   database
     .prepare(
-      'UPDATE work_orders SET customer_name = ?, vehicle = ?, data_json = ? WHERE id = ?',
+      'UPDATE work_orders SET customer_name = ?, vehicle = ?, status = ?, data_json = ? WHERE id = ?',
     )
     .run(
       normalized.customerName.trim(),
       vehicle,
+      normalized.status ?? 'open',
       JSON.stringify(order),
       row.id,
     );
@@ -1894,23 +1896,13 @@ if (app.isPackaged) {
 }
 
 function getAppIconPath(): string | undefined {
-  const isWin = process.platform === 'win32';
-  const primaryName = isWin ? 'icon.ico' : 'icon.png';
-  const fallbackName = isWin ? 'icon.png' : 'icon.ico';
+  const iconName = process.platform === 'win32' ? 'icon.ico' : 'icon.png';
   const candidates = [
-    path.join(__dirname, `../../assets/${primaryName}`),
-    path.join(__dirname, `../../assets/${fallbackName}`),
-    path.join(process.resourcesPath, `assets/${primaryName}`),
-    path.join(process.resourcesPath, `assets/${fallbackName}`),
-    path.join(process.resourcesPath, primaryName),
-    path.join(process.resourcesPath, fallbackName),
-    path.join(app.getAppPath(), `assets/${primaryName}`),
-    path.join(app.getAppPath(), `assets/${fallbackName}`),
+    path.join(__dirname, '../../assets', iconName),
+    path.join(process.resourcesPath, 'assets', iconName),
+    path.join(app.getAppPath(), 'assets', iconName),
   ];
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) return candidate;
-  }
-  return undefined;
+  return candidates.find((candidate) => existsSync(candidate));
 }
 
 function createWindow() {

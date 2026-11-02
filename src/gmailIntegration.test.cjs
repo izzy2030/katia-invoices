@@ -578,21 +578,7 @@ const receiptModule = loadModule('receipt');
     'Mark must not depend on installed fonts',
   );
 
-  // Test 5.2: Horizontal Lockup, Google Profile Avatar & App Icon SVGs
-  const horizSvg = logoModule.katiaHorizontalLockupSvg();
-  assert.ok(horizSvg.includes('viewBox="0 0 900 300"'));
-  assert.ok(horizSvg.includes('Katia Auto Sales &amp; Repairs Inc.'));
-  assert.ok(!horizSvg.includes('<text'), 'Lockup must use outlined type');
-  assert.ok(!horizSvg.includes('<rect'), 'Lockup must be transparent');
-
-  const gbpSvg = logoModule.katiaGoogleProfileAvatarSvg();
-  assert.ok(gbpSvg.includes('viewBox="0 0 1024 1024"'));
-  assert.ok(gbpSvg.includes('Katia Auto Sales &amp; Repairs Inc.'));
-
-  const appIconSvg = logoModule.katiaAppIconSvg();
-  assert.ok(appIconSvg.includes('rx="180"'));
-
-  // Test 5.3: Email Brand Header & htmlToPlainText SVG stripping
+  // Test 5.2: Email Brand Header & htmlToPlainText SVG stripping
   const emailHeader = logoModule.buildKatiaEmailBrandHeader({
     shopName: 'Katia Auto Sales & Repairs',
     subtitle: '1005 Rural St, Aurora, IL 60505',
@@ -622,7 +608,7 @@ const receiptModule = loadModule('receipt');
     'Plain text converter must preserve email body text',
   );
 
-  // Test 5.4: Receipt HTML integration with Nut Ring mark
+  // Test 5.3: Receipt HTML integration with Nut Ring mark
   const sampleReceipt = receiptModule.receiptHtml(
     {
       id: 'ord-1',

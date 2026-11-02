@@ -21,7 +21,6 @@ interface WorkOrderChargesProps {
   charges: ChargeLine[];
   defaults: TaxDefaults;
   onChange: (charges: ChargeLine[]) => void;
-  presets?: CatalogPreset[];
 }
 
 interface ActiveSlashState {
@@ -35,12 +34,9 @@ export default function WorkOrderCharges({
   charges,
   defaults,
   onChange,
-  presets: propPresets,
 }: WorkOrderChargesProps) {
   // Presets catalog state
-  const [catalogPresets, setCatalogPresets] = useState<CatalogPreset[]>(
-    propPresets || [],
-  );
+  const [catalogPresets, setCatalogPresets] = useState<CatalogPreset[]>([]);
   const [activeSlash, setActiveSlash] = useState<ActiveSlashState | null>(null);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
@@ -49,7 +45,6 @@ export default function WorkOrderCharges({
     'labor' | 'parts' | null
   >(null);
   const [quickSearch, setQuickSearch] = useState('');
-  const [quickFilter, setQuickFilter] = useState<string>('all');
 
   const paletteRef = useRef<HTMLDivElement | null>(null);
   const quickPickerRef = useRef<HTMLDivElement | null>(null);
@@ -67,16 +62,12 @@ export default function WorkOrderCharges({
   }, []);
 
   useEffect(() => {
-    if (!propPresets || propPresets.length === 0) {
-      void loadPresets();
-    } else {
-      setCatalogPresets(propPresets);
-    }
+    void loadPresets();
 
     const onUpdated = () => void loadPresets();
     window.addEventListener('katia:presets-updated', onUpdated);
     return () => window.removeEventListener('katia:presets-updated', onUpdated);
-  }, [loadPresets, propPresets]);
+  }, [loadPresets]);
 
   // Click outside listener for quick picker and slash palette
   useEffect(() => {
@@ -382,13 +373,8 @@ export default function WorkOrderCharges({
     const q = quickSearch.toLowerCase().trim();
     const isLabor = quickPickerSection === 'labor';
     return catalogPresets.filter((p) => {
-      if (quickFilter !== 'all') {
-        if (p.category !== quickFilter) return false;
-      } else {
-        // If 'all', default filter to matching section
-        if (isLabor && p.category === 'parts' && !q) return false;
-        if (!isLabor && p.category !== 'parts' && !q) return false;
-      }
+      if (isLabor && p.category === 'parts' && !q) return false;
+      if (!isLabor && p.category !== 'parts' && !q) return false;
       if (!q) return true;
       return (
         p.shortcut.toLowerCase().includes(q) ||
@@ -397,7 +383,7 @@ export default function WorkOrderCharges({
         (p.partNumber && p.partNumber.toLowerCase().includes(q))
       );
     });
-  }, [catalogPresets, quickSearch, quickFilter, quickPickerSection]);
+  }, [catalogPresets, quickSearch, quickPickerSection]);
 
   return (
     <div className="work-order-charges-container full-width">
@@ -436,7 +422,6 @@ export default function WorkOrderCharges({
                     quickPickerSection === 'labor' ? null : 'labor',
                   );
                   setQuickSearch('');
-                  setQuickFilter('all');
                 }}
                 title="Pick from body shop presets catalog"
               >
@@ -782,7 +767,6 @@ export default function WorkOrderCharges({
                     quickPickerSection === 'parts' ? null : 'parts',
                   );
                   setQuickSearch('');
-                  setQuickFilter('parts');
                 }}
                 title="Pick from body shop replacement parts catalog"
               >
@@ -897,7 +881,6 @@ export default function WorkOrderCharges({
                   onClick={() => {
                     setQuickPickerSection('parts');
                     setQuickSearch('');
-                    setQuickFilter('parts');
                   }}
                 >
                   <Sparkles size={13} />

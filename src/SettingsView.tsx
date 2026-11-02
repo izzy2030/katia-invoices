@@ -37,7 +37,6 @@ interface SettingsViewProps {
   ) => Promise<BackupImportResult | undefined>;
   onExportCsv?: () => void;
   initialTab?: SettingsTab;
-  onPresetsChanged?: () => void;
   appVersion?: string;
 }
 
@@ -96,7 +95,6 @@ export default function SettingsView({
   onImportBackup,
   onExportCsv,
   initialTab = 'shop',
-  onPresetsChanged,
   appVersion = '1.1.1',
 }: SettingsViewProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
@@ -456,9 +454,7 @@ export default function SettingsView({
           />
         )}
 
-        {activeTab === 'presets' && (
-          <PresetsTab onPresetsChanged={onPresetsChanged} />
-        )}
+        {activeTab === 'presets' && <PresetsTab />}
 
         {activeTab === 'taxes' && (
           <TaxesTab

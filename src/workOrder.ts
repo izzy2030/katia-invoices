@@ -106,7 +106,7 @@ export const defaultTaxable = (
   kind: ChargeKind,
   defaults: TaxDefaults = builtInTaxDefaults,
 ) => defaults[kind];
-export const RECEIPT_STYLES = ['modern', 'classic'] as const;
+const RECEIPT_STYLES = ['modern', 'classic'] as const;
 export type ReceiptStyle = (typeof RECEIPT_STYLES)[number];
 export const normalizeReceiptStyle = (value: unknown): ReceiptStyle =>
   RECEIPT_STYLES.find((style) => style === value) ?? 'modern';
@@ -137,15 +137,6 @@ export type EmailSettings = {
   resendFromEmail: string;
   gmailUser: string;
   gmailAppPassword: string;
-};
-
-export const defaultEmailSettings: EmailSettings = {
-  provider: 'resend',
-  senderName: 'Katia Auto Sales & Repairs',
-  resendApiKey: '',
-  resendFromEmail: '',
-  gmailUser: '',
-  gmailAppPassword: '',
 };
 
 export type EmailSendResult = {
@@ -299,10 +290,6 @@ export const hasSupplementLines = (input: WorkOrderInput) =>
       line.amount?.trim(),
     ),
   );
-export const revisedEstimateTotal = (input: WorkOrderInput) =>
-  Math.round(
-    (chargeTotals(input).total + supplementTotals(input).total) * 100,
-  ) / 100;
 const VALID_CHARGE_KINDS: readonly ChargeKind[] = [
   'parts',
   'labor',
