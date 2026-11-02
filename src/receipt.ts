@@ -243,7 +243,7 @@ function modernReceiptHtml(
     font-weight: 200 800;
     src: url(data:font/woff2;base64,${MANROPE_WOFF2_BASE64}) format('woff2');
   }
-  @page { size: letter portrait; margin: 0.5in 0.5in; }
+  @page { size: letter portrait; margin: 0.35in 0.45in; }
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   html, body {
     margin: 0;
@@ -267,7 +267,7 @@ function modernReceiptHtml(
       max-width: 8.5in;
       min-height: 11in;
       background: #ffffff;
-      padding: 0.5in 0.6in;
+      padding: 0.38in 0.5in;
       border-radius: 6px;
       box-shadow: 0 4px 24px rgba(15, 23, 42, 0.15), 0 1px 3px rgba(15, 23, 42, 0.08);
       margin: 0 auto;
@@ -311,18 +311,38 @@ function modernReceiptHtml(
   .blank-fact-item {
     flex: 1;
   }
+  .blank-lines-table {
+    margin-top: 6pt;
+  }
   .blank-lines-table tbody tr {
-    height: 18pt;
+    height: 16pt;
   }
   .blank-lines-table tbody td {
     border-bottom: 0.5pt solid #cbd5e1;
+  }
+  .blank-facts {
+    display: grid !important;
+    grid-template-columns: 2.2fr 1.3fr 1fr 1fr !important;
+    gap: 5pt 12pt !important;
+    margin-top: 8pt !important;
+    padding: 6pt 0 !important;
+    border-top: 1pt solid #0f172a !important;
+    border-bottom: 0.5pt solid #cbd5e1 !important;
+  }
+  .blank-facts .fact {
+    grid-row: auto !important;
+    grid-column: auto !important;
+    min-width: 0;
+  }
+  .blank-facts .fact-span-2 {
+    grid-column: span 2 !important;
   }
   .blank-totals-table {
     width: 195pt;
     border-collapse: collapse;
   }
   .blank-totals-table td {
-    padding: 3pt 0;
+    padding: 2pt 0;
     vertical-align: bottom;
   }
   .blank-totals-table .blank-amount-cell {
@@ -340,7 +360,7 @@ function modernReceiptHtml(
   }
   .blank-totals-table .grand .blank-amount-cell {
     border-bottom: 1.25pt solid #0f172a;
-    padding-top: 6pt;
+    padding-top: 4pt;
   }
   .blank-totals-table .grand .dollar-sign {
     color: #0f172a;
@@ -543,7 +563,8 @@ function modernReceiptHtml(
     </section>
 
     <section class="facts blank-facts">
-      <div class="fact fact-customer">
+      <!-- Row 1: Customer Name | Phone | Date In | Delivery Date -->
+      <div class="fact">
         <label>Customer name</label>
         <div class="write-line"></div>
       </div>
@@ -559,7 +580,9 @@ function modernReceiptHtml(
         <label>Delivery date</label>
         <div class="write-line"></div>
       </div>
-      <div class="fact fact-customer">
+
+      <!-- Row 2: Street Address | Customer Email | Written By | Technician -->
+      <div class="fact">
         <label>Street address, City, State, ZIP</label>
         <div class="write-line"></div>
       </div>
@@ -575,21 +598,26 @@ function modernReceiptHtml(
         <label>Technician</label>
         <div class="write-line"></div>
       </div>
-      <div class="fact fact-wide">
+
+      <!-- Row 3: Terms | Customer order # | Call when ready -->
+      <div class="fact">
         <label>Terms</label>
         <div>Balance due at vehicle pickup</div>
       </div>
       <div class="fact">
+        <label>Customer order no.</label>
+        <div class="write-line"></div>
+      </div>
+      <div class="fact fact-span-2">
         <label>Call when ready</label>
-        <div><span class="box"></span> Yes &nbsp;&nbsp; <span class="box"></span> No</div>
+        <div><span class="box"></span> Yes &nbsp;&nbsp;&nbsp;&nbsp; <span class="box"></span> No</div>
       </div>
     </section>
 
-    <section class="request blank-request">
+    <section class="request blank-request" style="margin-top: 6pt;">
       <label>Services requested / customer concerns / damage notes</label>
-      <div class="write-line" style="margin-top: 3pt;"></div>
-      <div class="write-line" style="margin-top: 7pt;"></div>
-      <div class="write-line" style="margin-top: 7pt;"></div>
+      <div class="write-line" style="margin-top: 2pt;"></div>
+      <div class="write-line" style="margin-top: 5pt;"></div>
     </section>
 
     <table class="lines blank-lines-table">
@@ -604,7 +632,7 @@ function modernReceiptHtml(
         </tr>
       </thead>
       <tbody>
-        ${Array.from({ length: 9 })
+        ${Array.from({ length: 7 })
           .map(
             () =>
               `<tr class="line blank-row">
