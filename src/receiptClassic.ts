@@ -1,4 +1,6 @@
 import { katiaHexBadgeSvg } from './logo';
+import { escapeHtml } from './html';
+import { isDigitalSignature, money, receiptPolicy } from './receiptShared';
 import {
   chargeTotals,
   defaultLegacy,
@@ -22,20 +24,7 @@ export function classicReceiptHtml(
   const isBlank = Boolean(options?.isBlank);
   const order = { ...raw, ...normalizeInput(raw) };
   const details = { ...defaultLegacy, ...order.legacy };
-  const e = (value: unknown) =>
-    String(value ?? '').replace(
-      /[&<>"']/g,
-      (char) =>
-        ({
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#39;',
-        })[char]!,
-    );
-  const money = (value: number) =>
-    value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  const e = escapeHtml;
   const field = (label: string, value: unknown, className = '') =>
     `<div class="field ${className}"><label>${e(label)}</label><div>${isBlank ? '&nbsp;' : e(value) || '—'}</div></div>`;
 
@@ -166,20 +155,8 @@ export function classicReceiptHtml(
   };
 
   const policy = (text: string) =>
-    e(
-      text.replaceAll(
-        '{deposit}',
-        !isBlank && details.depositAmount
-          ? money(Number(details.depositAmount))
-          : '________',
-      ),
-    );
-
-  const hasDigitalSignature =
-    Boolean(details.signature) &&
-    /^data:image\/(?:png|svg\+xml);base64,[A-Za-z0-9+/=]+$/.test(
-      details.signature,
-    );
+    receiptPolicy(text, details.depositAmount, isBlank);
+  const hasDigitalSignature = isDigitalSignature(details.signature);
 
   const signatureBlock = `
     <div class="sign-container">

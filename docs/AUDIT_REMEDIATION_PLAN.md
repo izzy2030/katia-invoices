@@ -1,6 +1,6 @@
 # Implementation Plan: Audit Remediation (Bug Fixes + Simplification)
 
-Status: **Phases 1–3 and 0.4 committed (`260863f`, `b65ce93`, `b9a8bfa`, `4147d02`); Phase 4 implemented, pending commit.**
+Status: **Phases 1–4 committed (`260863f`, `b65ce93`, `b9a8bfa`, `4147d02`, `8d8fd39`); Phase 5 complete.**
 Source: whole-repo `/ponytail-audit` of 2026-11-02 (23 over-engineering findings, 8 defects).
 Baseline: `npm run typecheck` exits 0, `npm test` passes 9/9, `npm run lint` clean (0 warnings, 0 errors).
 
@@ -11,6 +11,8 @@ Phase 3 note: the Resend/SMTP sender, email-settings types and IPC bridge are go
 Phase 0.4 note: `src/settingsStore.test.cjs` pins `writeSettingsToDb` → `getSettingsFromDb` (defaults, full round-trip, coercions, rejection) so Phase 4 can merge the two stores against a fixed contract.
 
 Phase 4 note: startup now calls `ensureBackupSchema` (all five tables), `saveSettings` delegates to `writeSettingsToDb`/`getSettingsFromDb` inside one transaction, amount validation is shared from `workOrder.ts`, and preset seeding is one helper used by startup and reset. Export→import gate passed: 1 order, $10.83, identical settings and `classic` receipt style.
+
+Phase 5 note: one `applyShopDefaults`/`resetWorkspace`/`setNotice` path replaces the repeated merges, view resets, and regex severity; both email dialogs are one `EmailOrderModal`; the revised-estimate editor is the compact `WorkOrderCharges` variant (`ChargeRows` deleted); receipt helpers live in `receiptShared.ts`; and `window.repairDesk` is typed from the preload object. Net −540 lines. Post-save email was not exercised because Gmail is disconnected; receipt HTML is covered by the blank-receipt suite, but sample PDFs were not regenerated.
 
 ---
 

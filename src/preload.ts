@@ -10,7 +10,7 @@ import {
 } from './workOrder';
 import { contextBridge, ipcRenderer } from 'electron';
 
-contextBridge.exposeInMainWorld('repairDesk', {
+const repairDesk = {
   listWorkOrders: () => ipcRenderer.invoke('work-orders:list'),
   listCustomerContacts: () => ipcRenderer.invoke('customer-contacts:list'),
   saveCustomerContact: (contact: CustomerContact) =>
@@ -87,4 +87,8 @@ contextBridge.exposeInMainWorld('repairDesk', {
       ipcRenderer.removeListener('window:maximized-change', listener);
     };
   },
-});
+};
+
+export type RepairDeskApi = typeof repairDesk;
+
+contextBridge.exposeInMainWorld('repairDesk', repairDesk);

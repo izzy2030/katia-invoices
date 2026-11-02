@@ -1,5 +1,5 @@
-import ChargeRows from './ChargeRows';
 import CustomersView from './Customers';
+import EmailOrderModal, { type EmailDraft } from './EmailOrderModal';
 import { resolveEmailRoute } from './emailRouting';
 import CustomerAutofillSearch from './CustomerAutofillSearch';
 import ExpandableCustomerNotes from './ExpandableCustomerNotes';
@@ -8,7 +8,7 @@ import KatiaLogo from './KatiaLogo';
 import LegacyFields from './LegacyFields';
 import SettingsView, { type SettingsTab } from './SettingsView';
 import WindowTitleBar from './WindowTitleBar';
-import { Printer, Mail, Eye, Settings } from 'lucide-react';
+import { Printer, Eye, Settings } from 'lucide-react';
 import {
   customerProfiles,
   orderCustomerKey,
@@ -22,6 +22,7 @@ import {
   chargeTotals,
   defaultLegacy,
   defaultTaxable,
+  type ChargeLine,
   isPromiseDue,
   normalizeStatus,
   ORDER_STATUSES,
@@ -29,6 +30,9 @@ import {
   supplementTotals,
   type LegacyDetails,
   type TaxDefaults,
+  type TaxSettings,
+  type WorkOrder,
+  type WorkOrderInput,
   type WorkOrderStatus,
 } from './workOrder';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
@@ -124,35 +128,87 @@ const editableOrder = (order: WorkOrder): WorkOrderInput => ({
   legacy: { ...defaultLegacy, ...order.legacy },
 });
 
+const hasChargeContent = (line: ChargeLine) =>
+  Boolean(line.description?.trim()) ||
+  Boolean(line.partNumber?.trim()) ||
+  Boolean(line.unitPrice?.trim()) ||
+  (line.amount !== '' && line.amount !== undefined && Number(line.amount) > 0);
+
 const isOrderBeingFilled = (
   form: WorkOrderInput,
   editing: boolean,
 ): boolean => {
   if (editing) return true;
-  if (
-    Boolean(form.customerName?.trim()) ||
-    Boolean(form.phone?.trim()) ||
-    Boolean(form.email?.trim()) ||
-    Boolean(form.address?.trim()) ||
-    Boolean(form.vehicleYear?.trim()) ||
-    Boolean(form.vehicleMake?.trim()) ||
-    Boolean(form.vehicleModel?.trim()) ||
-    Boolean(form.vin?.trim()) ||
-    Boolean(form.licensePlate?.trim()) ||
-    Boolean(form.mileage?.trim()) ||
-    Boolean(form.concerns?.trim()) ||
-    Boolean(form.datePromised?.trim())
-  ) {
-    return true;
-  }
-  return form.charges.some(
-    (c) =>
-      Boolean(c.description?.trim()) ||
-      Boolean(c.partNumber?.trim()) ||
-      Boolean(c.unitPrice?.trim()) ||
-      (c.amount !== '' && c.amount !== undefined && Number(c.amount) > 0),
+  const filled = [
+    form.customerName,
+    form.phone,
+    form.email,
+    form.address,
+    form.vehicleYear,
+    form.vehicleMake,
+    form.vehicleModel,
+    form.vin,
+    form.licensePlate,
+    form.mileage,
+    form.concerns,
+    form.datePromised,
+  ];
+  return (
+    filled.some((value) => Boolean(value?.trim())) ||
+    form.charges.some(hasChargeContent)
   );
 };
+
+const applyTaxDefaultChanges = (
+  lines: ChargeLine[],
+  previous: TaxDefaults,
+  next: TaxDefaults,
+) =>
+  lines.map((line) =>
+    line.taxable === undefined ||
+    line.taxable === defaultTaxable(line.kind, previous)
+      ? { ...line, taxable: defaultTaxable(line.kind, next) }
+      : line,
+  );
+
+const applyShopDefaults = (
+  form: WorkOrderInput,
+  settings: TaxSettings,
+  previous: TaxDefaults = builtInTaxDefaults,
+): WorkOrderInput => ({
+  ...form,
+  taxRate: form.taxRate || settings.taxRate,
+  charges: applyTaxDefaultChanges(form.charges, previous, settings.defaults),
+  revisedCharges: applyTaxDefaultChanges(
+    form.revisedCharges ?? [],
+    previous,
+    settings.defaults,
+  ),
+  legacy: {
+    ...defaultLegacy,
+    ...form.legacy,
+    city: form.legacy?.city || settings.shopCity || defaultLegacy.city,
+    state: form.legacy?.state || settings.shopState || defaultLegacy.state,
+    zip: form.legacy?.zip || settings.shopZip || defaultLegacy.zip,
+    terms: form.legacy?.terms || settings.defaultTerms || defaultLegacy.terms,
+    writtenBy:
+      form.legacy?.writtenBy ||
+      settings.defaultWrittenBy ||
+      defaultLegacy.writtenBy,
+    technician:
+      form.legacy?.technician ||
+      settings.defaultTechnician ||
+      defaultLegacy.technician,
+    callWhenReady:
+      form.legacy?.callWhenReady ||
+      settings.defaultCallWhenReady ||
+      defaultLegacy.callWhenReady,
+    saveOldParts:
+      form.legacy?.saveOldParts ||
+      settings.defaultSaveOldParts ||
+      defaultLegacy.saveOldParts,
+  },
+});
 
 function Field({
   label,
@@ -271,29 +327,20 @@ function App() {
   });
   const [savedTaxRate, setSavedTaxRate] = useState('');
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState('');
+  const [notice, setNoticeText] = useState('');
+  const [noticeIsError, setNoticeIsError] = useState(false);
   const [appVersion, setAppVersion] = useState('1.1.1');
-  const [emailModalOrder, setEmailModalOrder] = useState<WorkOrder | null>(
-    null,
-  );
-  const [emailRecipient, setEmailRecipient] = useState('');
-  const [emailSubject, setEmailSubject] = useState('');
-  const [emailCustomNote, setEmailCustomNote] = useState('');
+  const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
   const [emailSending, setEmailSending] = useState(false);
-  const [gmailStatus, setGmailStatus] = useState<{
-    connected: boolean;
-    email?: string;
-  } | null>(null);
   const [emailModalError, setEmailModalError] = useState('');
   const [showAddress, setShowAddress] = useState(false);
   const focusStreetOnOpen = useRef(false);
   const [switchVehicleOpen, setSwitchVehicleOpen] = useState(false);
-  const [postSaveEmailPrompt, setPostSaveEmailPrompt] = useState<{
-    order: WorkOrder;
-    senderDescription: string;
-  } | null>(null);
-  const [postSaveRecipient, setPostSaveRecipient] = useState('');
-  const [postSaveEmailError, setPostSaveEmailError] = useState('');
+
+  function setNotice(text: string, options?: { error?: boolean }) {
+    setNoticeText(text);
+    setNoticeIsError(Boolean(text) && Boolean(options?.error));
+  }
 
   useEffect(() => {
     void window.repairDesk
@@ -306,7 +353,9 @@ function App() {
         setPromisedTo(saved.promisedTo);
         setDashboardLoaded(true);
       })
-      .catch(() => setNotice('Could not load saved dashboard choices.'));
+      .catch(() =>
+        setNotice('Could not load saved dashboard choices.', { error: true }),
+      );
   }, []);
 
   useEffect(() => {
@@ -319,7 +368,9 @@ function App() {
         promisedFrom,
         promisedTo,
       })
-      .catch(() => setNotice('Could not remember dashboard choices.'));
+      .catch(() =>
+        setNotice('Could not remember dashboard choices.', { error: true }),
+      );
   }, [
     dashboardLoaded,
     query,
@@ -351,45 +402,7 @@ function App() {
         setShopSettings(settings);
         setShopDefaults(settings.defaults);
         setSavedTaxRate(settings.taxRate);
-        setForm((current) => ({
-          ...current,
-          taxRate: current.taxRate || settings.taxRate,
-          charges: current.charges.map((line) => ({
-            ...line,
-            taxable: line.taxable ?? settings.defaults[line.kind],
-          })),
-          legacy: {
-            ...defaultLegacy,
-            ...current.legacy,
-            city:
-              current.legacy?.city || settings.shopCity || defaultLegacy.city,
-            state:
-              current.legacy?.state ||
-              settings.shopState ||
-              defaultLegacy.state,
-            zip: current.legacy?.zip || settings.shopZip || defaultLegacy.zip,
-            terms:
-              current.legacy?.terms ||
-              settings.defaultTerms ||
-              defaultLegacy.terms,
-            writtenBy:
-              current.legacy?.writtenBy ||
-              settings.defaultWrittenBy ||
-              defaultLegacy.writtenBy,
-            technician:
-              current.legacy?.technician ||
-              settings.defaultTechnician ||
-              defaultLegacy.technician,
-            callWhenReady:
-              current.legacy?.callWhenReady ||
-              settings.defaultCallWhenReady ||
-              defaultLegacy.callWhenReady,
-            saveOldParts:
-              current.legacy?.saveOldParts ||
-              settings.defaultSaveOldParts ||
-              defaultLegacy.saveOldParts,
-          },
-        }));
+        setForm((current) => applyShopDefaults(current, settings));
       })
       .catch(() => undefined);
   }, []);
@@ -615,13 +628,17 @@ function App() {
     action?.();
   }
 
-  function startNewOrderNow() {
-    setNotice('');
+  function resetWorkspace() {
     setSettingsOpen(false);
     setCustomersOpen(false);
     setEditingId(null);
     setDuplicateOf(null);
     setReturnCustomerKey(null);
+  }
+
+  function startNewOrderNow() {
+    setNotice('');
+    resetWorkspace();
     setShowAddress(false);
     setSwitchVehicleOpen(false);
     setForm(blankOrder(savedTaxRate, shopDefaults, shopSettings));
@@ -634,11 +651,8 @@ function App() {
 
   function openCustomersNow() {
     setNotice('');
-    setSettingsOpen(false);
+    resetWorkspace();
     setCreating(false);
-    setEditingId(null);
-    setDuplicateOf(null);
-    setReturnCustomerKey(null);
     if (!customersOpen) setSelectedCustomerKey(null);
     setCustomersOpen(true);
   }
@@ -648,11 +662,7 @@ function App() {
   }
 
   function openDashboardNow() {
-    setSettingsOpen(false);
-    setCustomersOpen(false);
-    setEditingId(null);
-    setDuplicateOf(null);
-    setReturnCustomerKey(null);
+    resetWorkspace();
     setCreating(false);
   }
 
@@ -677,6 +687,7 @@ function App() {
         error instanceof Error
           ? error.message
           : 'Could not save customer contact details.',
+        { error: true },
       );
       return false;
     } finally {
@@ -706,6 +717,7 @@ function App() {
     } catch (error) {
       setNotice(
         error instanceof Error ? error.message : 'Could not save vehicle.',
+        { error: true },
       );
       return false;
     } finally {
@@ -720,11 +732,8 @@ function App() {
         ? (tab as SettingsTab)
         : 'shop';
     setNotice('');
-    setCustomersOpen(false);
+    resetWorkspace();
     setCreating(false);
-    setEditingId(null);
-    setDuplicateOf(null);
-    setReturnCustomerKey(null);
     setSettingsTab(targetTab);
     setSettingsOpen(true);
   }
@@ -738,11 +747,7 @@ function App() {
     vehicle?: CustomerVehicle,
   ) {
     setNotice('');
-    setSettingsOpen(false);
-    setCustomersOpen(false);
-    setEditingId(null);
-    setDuplicateOf(null);
-    setReturnCustomerKey(null);
+    resetWorkspace();
     setForm({
       ...blankOrder(savedTaxRate, shopDefaults, shopSettings),
       customerKey: customer.key,
@@ -785,10 +790,8 @@ function App() {
 
   function startEdit(order: WorkOrder, returnCustomer: string | null = null) {
     setNotice('');
-    setSettingsOpen(false);
-    setCustomersOpen(false);
+    resetWorkspace();
     setEditingId(order.id);
-    setDuplicateOf(null);
     setReturnCustomerKey(returnCustomer);
     if (returnCustomer) setSelectedCustomerKey(returnCustomer);
     setShowAddress(Boolean(order.address?.trim()));
@@ -809,11 +812,8 @@ function App() {
     setSwitchVehicleOpen(false);
     const rate = copy.taxRate?.trim() ? copy.taxRate : savedTaxRate;
     setNotice('');
-    setSettingsOpen(false);
-    setCustomersOpen(false);
-    setEditingId(null);
+    resetWorkspace();
     setDuplicateOf(order);
-    setReturnCustomerKey(null);
     setForm({
       ...copy,
       dateIn: today(),
@@ -856,7 +856,7 @@ function App() {
       setNotice(`${pendingDelete.orderNumber} deleted.`);
       setPendingDelete(null);
     } catch {
-      setNotice('Could not delete this repair order.');
+      setNotice('Could not delete this repair order.', { error: true });
     } finally {
       setBusy(false);
     }
@@ -888,52 +888,6 @@ function App() {
       return { configured: false, senderDescription: '' };
     } catch {
       return { configured: false, senderDescription: '' };
-    }
-  }
-
-  function dismissPostSaveEmail() {
-    if (emailSending) return;
-    if (postSaveEmailPrompt) {
-      setNotice(
-        `${postSaveEmailPrompt.order.orderNumber} saved and sent to printer.`,
-      );
-    }
-    setPostSaveEmailPrompt(null);
-  }
-
-  async function sendPostSaveEmail() {
-    if (!postSaveEmailPrompt) return;
-    const recipient = postSaveRecipient.trim();
-    if (!recipient) {
-      setPostSaveEmailError('Please enter a customer email address.');
-      return;
-    }
-    setEmailSending(true);
-    setPostSaveEmailError('');
-    const order = postSaveEmailPrompt.order;
-    try {
-      const gmail = await window.repairDesk.getGmailStatus().catch(() => null);
-      if (resolveEmailRoute(gmail).kind === 'gmail') {
-        await window.repairDesk.sendGmailOrderEmail({
-          orderId: order.id,
-          recipient,
-          subject: `Repair Order ${order.orderNumber} · Katia Auto Sales & Repairs`,
-          personalNote: `Thank you for choosing Katia Auto Sales & Repairs. Attached is your official repair order and invoice (${order.orderNumber}.pdf).`,
-        });
-      } else {
-        setPostSaveEmailError(
-          'Gmail is not connected. Connect it in Settings to email invoices.',
-        );
-        return;
-      }
-      setNotice(`✓ ${order.orderNumber} sent via email to ${recipient}!`);
-      setPostSaveEmailPrompt(null);
-      void window.repairDesk.listWorkOrders().then(setOrders);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setPostSaveEmailError(msg || 'Could not send email.');
-    } finally {
-      setEmailSending(false);
     }
   }
 
@@ -982,10 +936,13 @@ function App() {
           (c) => c.key === orderCustomerKey(saved, customerContacts),
         );
         const recipient = saved.email || contact?.email || form.email || '';
-        setPostSaveRecipient(recipient);
-        setPostSaveEmailError('');
-        setPostSaveEmailPrompt({
+        setEmailModalError('');
+        setEmailDraft({
+          mode: 'post-save',
           order: saved,
+          recipient,
+          subject: `Repair Order ${saved.orderNumber} · Katia Auto Sales & Repairs`,
+          note: `Thank you for choosing Katia Auto Sales & Repairs. Attached is your official repair order and invoice (${saved.orderNumber}.pdf).`,
           senderDescription: emailConfig.senderDescription,
         });
       } else {
@@ -998,6 +955,7 @@ function App() {
         error instanceof Error
           ? error.message
           : 'Could not save this repair order.',
+        { error: true },
       );
     } finally {
       setBusy(false);
@@ -1023,7 +981,7 @@ function App() {
         }
       }
     } catch {
-      setNotice('Could not create the PDF. Please try again.');
+      setNotice('Could not create the PDF. Please try again.', { error: true });
     }
   }
 
@@ -1032,7 +990,7 @@ function App() {
       await window.repairDesk.printBlankOrder();
     } catch (err) {
       console.warn('Could not launch blank order print:', err);
-      setNotice('Could not open blank order print preview.');
+      setNotice('Could not open blank order print preview.', { error: true });
     }
   }
 
@@ -1062,61 +1020,85 @@ function App() {
       await window.repairDesk.printOrder(draft, { autoPrint: false });
     } catch (err) {
       console.warn('Could not launch order preview:', err);
-      setNotice('Could not open print preview.');
+      setNotice('Could not open print preview.', { error: true });
     }
   }
 
   function openEmailModal(order: WorkOrder) {
-    setEmailModalOrder(order);
-    setEmailModalError('');
-    const defaultSubject = `Repair Order ${order.orderNumber} · Katia Auto Sales & Repairs`;
-    setEmailSubject(defaultSubject);
-    const defaultNote = `Thank you for choosing Katia Auto Sales & Repairs. Attached is the official repair order and invoice (${order.orderNumber}.pdf) for your records.`;
-    setEmailCustomNote(defaultNote);
     const contact = customerContacts.find(
       (c) => c.key === orderCustomerKey(order, customerContacts),
     );
-    setEmailRecipient(order.email || contact?.email || '');
+    setEmailModalError('');
+    setEmailDraft({
+      mode: 'full',
+      order,
+      recipient: order.email || contact?.email || '',
+      subject: `Repair Order ${order.orderNumber} · Katia Auto Sales & Repairs`,
+      note: `Thank you for choosing Katia Auto Sales & Repairs. Attached is the official repair order and invoice (${order.orderNumber}.pdf) for your records.`,
+      gmail: null,
+    });
     void window.repairDesk
       .getGmailStatus()
-      .then(setGmailStatus)
+      .then((gmail) =>
+        setEmailDraft((current) =>
+          current?.mode === 'full' ? { ...current, gmail } : current,
+        ),
+      )
       .catch(console.error);
   }
 
   function closeEmailModal() {
     if (emailSending) return;
-    setEmailModalOrder(null);
+    if (emailDraft?.mode === 'post-save') {
+      setNotice(`${emailDraft.order.orderNumber} saved and sent to printer.`);
+    }
+    setEmailDraft(null);
     setEmailModalError('');
   }
 
-  async function sendOrderEmail() {
-    if (!emailModalOrder) return;
-    if (!emailRecipient.trim()) {
+  async function sendEmailDraft() {
+    if (!emailDraft) return;
+    const recipient = emailDraft.recipient.trim();
+    if (!recipient) {
       setEmailModalError('Please enter a recipient email address.');
       return;
     }
-    if (!emailSubject.trim()) {
+    if (!emailDraft.subject.trim()) {
       setEmailModalError('Please enter an email subject line.');
       return;
     }
     setEmailSending(true);
     setEmailModalError('');
+    const { mode, order } = emailDraft;
     try {
-      const res = await window.repairDesk.sendGmailOrderEmail({
-        orderId: emailModalOrder.id,
-        recipient: emailRecipient.trim(),
-        subject: emailSubject.trim(),
-        personalNote: emailCustomNote.trim(),
-      });
-      if (res.success) {
-        setNotice(
-          `${emailModalOrder.orderNumber} sent via Gmail to ${emailRecipient.trim()}`,
-        );
-        setEmailModalOrder(null);
-        void window.repairDesk.listWorkOrders().then(setOrders);
-      } else {
-        setEmailModalError('Could not send email.');
+      if (mode === 'post-save') {
+        const gmail = await window.repairDesk
+          .getGmailStatus()
+          .catch(() => null);
+        if (resolveEmailRoute(gmail).kind !== 'gmail') {
+          setEmailModalError(
+            'Gmail is not connected. Connect it in Settings to email invoices.',
+          );
+          return;
+        }
       }
+      const res = await window.repairDesk.sendGmailOrderEmail({
+        orderId: order.id,
+        recipient,
+        subject: emailDraft.subject.trim(),
+        personalNote: emailDraft.note.trim(),
+      });
+      if (!res.success) {
+        setEmailModalError('Could not send email.');
+        return;
+      }
+      setNotice(
+        mode === 'post-save'
+          ? `✓ ${order.orderNumber} sent via email to ${recipient}!`
+          : `${order.orderNumber} sent via Gmail to ${recipient}`,
+      );
+      setEmailDraft(null);
+      void window.repairDesk.listWorkOrders().then(setOrders);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setEmailModalError(msg);
@@ -1133,7 +1115,7 @@ function App() {
       const saved = await window.repairDesk.exportBackupJson();
       if (saved) setNotice('Database backup exported successfully.');
     } catch {
-      setNotice('Could not export database backup.');
+      setNotice('Could not export database backup.', { error: true });
     } finally {
       setBusy(false);
     }
@@ -1155,7 +1137,7 @@ function App() {
         /^Error invoking remote method '[^']+': (?:Error: )?/i,
         '',
       );
-      setNotice(msg || 'Could not export SQLite database.');
+      setNotice(msg || 'Could not export SQLite database.', { error: true });
     } finally {
       setBusy(false);
     }
@@ -1196,56 +1178,9 @@ function App() {
             : null,
         );
 
-        const applyDefaults = (lines: ChargeLine[]) =>
-          lines.map((line) =>
-            line.taxable === undefined ||
-            line.taxable === defaultTaxable(line.kind, previousDefaults)
-              ? {
-                  ...line,
-                  taxable: defaultTaxable(line.kind, freshSettings.defaults),
-                }
-              : line,
-          );
-        setForm((current) => ({
-          ...current,
-          taxRate: freshSettings.taxRate || current.taxRate,
-          charges: applyDefaults(current.charges),
-          revisedCharges: applyDefaults(current.revisedCharges ?? []),
-          legacy: {
-            ...defaultLegacy,
-            ...current.legacy,
-            city:
-              current.legacy?.city ||
-              freshSettings.shopCity ||
-              defaultLegacy.city,
-            state:
-              current.legacy?.state ||
-              freshSettings.shopState ||
-              defaultLegacy.state,
-            zip:
-              current.legacy?.zip || freshSettings.shopZip || defaultLegacy.zip,
-            terms:
-              current.legacy?.terms ||
-              freshSettings.defaultTerms ||
-              defaultLegacy.terms,
-            writtenBy:
-              current.legacy?.writtenBy ||
-              freshSettings.defaultWrittenBy ||
-              defaultLegacy.writtenBy,
-            technician:
-              current.legacy?.technician ||
-              freshSettings.defaultTechnician ||
-              defaultLegacy.technician,
-            callWhenReady:
-              current.legacy?.callWhenReady ||
-              freshSettings.defaultCallWhenReady ||
-              defaultLegacy.callWhenReady,
-            saveOldParts:
-              current.legacy?.saveOldParts ||
-              freshSettings.defaultSaveOldParts ||
-              defaultLegacy.saveOldParts,
-          },
-        }));
+        setForm((current) =>
+          applyShopDefaults(current, freshSettings, previousDefaults),
+        );
 
         const modeDesc =
           result.mode === 'replace' ? 'restored' : 'merged into database';
@@ -1262,7 +1197,7 @@ function App() {
           /^Error invoking remote method '[^']+': (?:Error: )?/i,
           '',
         ) || 'Could not restore backup file.';
-      setNotice(msg);
+      setNotice(msg, { error: true });
       throw new Error(msg);
     } finally {
       setBusy(false);
@@ -1277,7 +1212,7 @@ function App() {
       const saved = await window.repairDesk.exportOrdersCsv();
       if (saved) setNotice('Repair orders exported to CSV successfully.');
     } catch {
-      setNotice('Could not export to CSV.');
+      setNotice('Could not export to CSV.', { error: true });
     } finally {
       setBusy(false);
     }
@@ -1294,7 +1229,7 @@ function App() {
         current.map((item) => (item.id === saved.id ? saved : item)),
       );
     } catch {
-      setNotice('Could not update the repair order status.');
+      setNotice('Could not update the repair order status.', { error: true });
     }
   }
 
@@ -1307,45 +1242,7 @@ function App() {
       const previous = shopDefaults;
       setShopDefaults(saved.defaults);
       setSavedTaxRate(saved.taxRate);
-      const applyDefaults = (lines: ChargeLine[]) =>
-        lines.map((line) =>
-          line.taxable === undefined ||
-          line.taxable === defaultTaxable(line.kind, previous)
-            ? { ...line, taxable: defaultTaxable(line.kind, saved.defaults) }
-            : line,
-        );
-      setForm((current) => ({
-        ...current,
-        taxRate: saved.taxRate || current.taxRate,
-        charges: applyDefaults(current.charges),
-        revisedCharges: applyDefaults(current.revisedCharges ?? []),
-        legacy: {
-          ...defaultLegacy,
-          ...current.legacy,
-          city: current.legacy?.city || saved.shopCity || defaultLegacy.city,
-          state:
-            current.legacy?.state || saved.shopState || defaultLegacy.state,
-          zip: current.legacy?.zip || saved.shopZip || defaultLegacy.zip,
-          terms:
-            current.legacy?.terms || saved.defaultTerms || defaultLegacy.terms,
-          writtenBy:
-            current.legacy?.writtenBy ||
-            saved.defaultWrittenBy ||
-            defaultLegacy.writtenBy,
-          technician:
-            current.legacy?.technician ||
-            saved.defaultTechnician ||
-            defaultLegacy.technician,
-          callWhenReady:
-            current.legacy?.callWhenReady ||
-            saved.defaultCallWhenReady ||
-            defaultLegacy.callWhenReady,
-          saveOldParts:
-            current.legacy?.saveOldParts ||
-            saved.defaultSaveOldParts ||
-            defaultLegacy.saveOldParts,
-        },
-      }));
+      setForm((current) => applyShopDefaults(current, saved, previous));
       setNotice('Shop configuration applied successfully.');
       return true;
     } catch (error) {
@@ -1353,6 +1250,7 @@ function App() {
         error instanceof Error
           ? error.message
           : 'Could not save configuration.',
+        { error: true },
       );
       return false;
     } finally {
@@ -1515,42 +1413,35 @@ function App() {
               )}
             </section>
 
-            {notice &&
-              (() => {
-                const isError =
-                  /^(could not|failed|error|invalid|missing|unknown|another customer|amounts,|customer name|the sales tax|cannot|backup contains|selected sqlite|unsupported|repair order|database contains)/i.test(
-                    notice.trim(),
-                  );
-                return (
-                  <div
-                    className={`notice ${isError ? 'error' : ''}`}
-                    role={isError ? 'alert' : 'status'}
+            {notice && (
+              <div
+                className={`notice ${noticeIsError ? 'error' : ''}`}
+                role={noticeIsError ? 'alert' : 'status'}
+              >
+                <span>{noticeIsError ? '!' : '✓'}</span>
+                <span>{notice}</span>
+                {noticeAction && (
+                  <button
+                    type="button"
+                    className="notice-action-btn"
+                    onClick={noticeAction.onClick}
                   >
-                    <span>{isError ? '!' : '✓'}</span>
-                    <span>{notice}</span>
-                    {noticeAction && (
-                      <button
-                        type="button"
-                        className="notice-action-btn"
-                        onClick={noticeAction.onClick}
-                      >
-                        {noticeAction.label}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className="notice-dismiss-btn"
-                      onClick={() => {
-                        setNotice('');
-                        setNoticeAction(null);
-                      }}
-                      aria-label="Dismiss"
-                    >
-                      ×
-                    </button>
-                  </div>
-                );
-              })()}
+                    {noticeAction.label}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="notice-dismiss-btn"
+                  onClick={() => {
+                    setNotice('');
+                    setNoticeAction(null);
+                  }}
+                  aria-label="Dismiss"
+                >
+                  ×
+                </button>
+              </div>
+            )}
 
             {settingsOpen ? (
               <SettingsView
@@ -1916,7 +1807,8 @@ function App() {
                     totals={totals}
                     revisedTotals={revisedTotals}
                     revisedEditor={
-                      <ChargeRows
+                      <WorkOrderCharges
+                        variant="compact"
                         charges={form.revisedCharges ?? []}
                         defaults={shopDefaults}
                         onChange={(revisedCharges) =>
@@ -2269,300 +2161,24 @@ function App() {
             </footer>
           </div>
         </main>
-        {postSaveEmailPrompt && (
-          <div
-            className="modal-backdrop animate-in"
-            role="presentation"
-            onClick={dismissPostSaveEmail}
-          >
-            <div
-              aria-labelledby="post-save-email-title"
-              aria-modal="true"
-              className="modal-card email-modal-dialog"
-              role="dialog"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="email-modal-header">
-                <div className="email-modal-icon">
-                  <Mail size={20} />
-                </div>
-                <div>
-                  <h2 id="post-save-email-title">Send a copy via email?</h2>
-                  <p>
-                    {postSaveEmailPrompt.order.orderNumber} was saved and sent
-                    to print.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="modal-close-btn"
-                  onClick={dismissPostSaveEmail}
-                  aria-label="Close"
-                  disabled={emailSending}
-                  style={{ marginLeft: 'auto' }}
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="email-modal-order-summary">
-                <div className="summary-item">
-                  <span className="summary-label">Customer</span>
-                  <strong>{postSaveEmailPrompt.order.customerName}</strong>
-                </div>
-                <div className="summary-item">
-                  <span className="summary-label">Vehicle</span>
-                  <strong>
-                    {[
-                      postSaveEmailPrompt.order.vehicleYear,
-                      postSaveEmailPrompt.order.vehicleMake,
-                      postSaveEmailPrompt.order.vehicleModel,
-                    ]
-                      .filter(Boolean)
-                      .join(' ') || 'Vehicle on file'}
-                  </strong>
-                </div>
-                <div className="summary-item right">
-                  <span className="summary-label">Total Amount</span>
-                  <strong className="summary-total">
-                    ${chargeTotals(postSaveEmailPrompt.order).total.toFixed(2)}
-                  </strong>
-                </div>
-              </div>
-
-              <div className="email-provider-status">
-                <span className="provider-ready">
-                  <span className="status-dot online" />
-                  Sending via {postSaveEmailPrompt.senderDescription}
-                </span>
-              </div>
-
-              <div className="email-modal-inputs">
-                <label className="field">
-                  <span>Customer Email Address</span>
-                  <input
-                    type="email"
-                    autoFocus
-                    placeholder="customer@example.com"
-                    value={postSaveRecipient}
-                    onChange={(e) => {
-                      setPostSaveRecipient(e.target.value);
-                      setPostSaveEmailError('');
-                    }}
-                    disabled={emailSending}
-                  />
-                </label>
-
-                <div className="email-modal-attachment-chip">
-                  <div className="attachment-icon">📄</div>
-                  <div className="attachment-meta">
-                    <strong>{postSaveEmailPrompt.order.orderNumber}.pdf</strong>
-                    <span>Official PDF Invoice · Attached automatically</span>
-                  </div>
-                </div>
-              </div>
-
-              {postSaveEmailError && (
-                <div className="email-modal-error-box">
-                  <span>⚠</span>
-                  <span>{postSaveEmailError}</span>
-                </div>
-              )}
-
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="secondary-button"
-                  disabled={emailSending}
-                  onClick={dismissPostSaveEmail}
-                >
-                  No, thanks
-                </button>
-                <button
-                  type="button"
-                  className="primary-button"
-                  disabled={emailSending || !postSaveRecipient.trim()}
-                  onClick={() => void sendPostSaveEmail()}
-                >
-                  {emailSending ? 'Sending…' : 'Send email'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        {emailModalOrder && (
-          <div
-            className="modal-backdrop animate-in"
-            role="presentation"
-            onClick={closeEmailModal}
-          >
-            <div
-              aria-labelledby="email-order-title"
-              aria-modal="true"
-              className="modal-card email-modal-dialog"
-              role="dialog"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="email-modal-header">
-                <div className="email-modal-icon">✉</div>
-                <div>
-                  <h2 id="email-order-title">
-                    Email {emailModalOrder.orderNumber}
-                  </h2>
-                  <p>Send invoice PDF to {emailModalOrder.customerName}</p>
-                </div>
-              </div>
-
-              <div className="email-modal-order-summary">
-                <div className="summary-item">
-                  <span className="summary-label">Vehicle</span>
-                  <strong>
-                    {[
-                      emailModalOrder.vehicleYear,
-                      emailModalOrder.vehicleMake,
-                      emailModalOrder.vehicleModel,
-                    ]
-                      .filter(Boolean)
-                      .join(' ') || 'Vehicle on file'}
-                  </strong>
-                </div>
-                <div className="summary-item right">
-                  <span className="summary-label">Total Amount</span>
-                  <strong className="summary-total">
-                    {emailModalOrder.total
-                      ? emailModalOrder.total.toLocaleString('en-US', {
-                          style: 'currency',
-                          currency: 'USD',
-                        })
-                      : '$0.00'}
-                  </strong>
-                </div>
-              </div>
-
-              {/* Provider indicator badge */}
-              <div className="email-provider-status">
-                {gmailStatus === null ? (
-                  <span className="provider-warning">
-                    <span className="status-dot warning" />
-                    Checking Gmail connection…
-                  </span>
-                ) : gmailStatus.connected ? (
-                  <span className="provider-ready">
-                    <span className="status-dot online" />
-                    Sending via connected Gmail (
-                    <strong>{gmailStatus.email}</strong>)
-                  </span>
-                ) : (
-                  <div className="gmail-modal-disconnected-banner">
-                    <div className="banner-text">
-                      <span className="status-dot warning" />
-                      <span>
-                        Gmail account not connected. Connect your Google account
-                        in Settings to send invoices.
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      className="gmail-modal-settings-link"
-                      onClick={() => {
-                        closeEmailModal();
-                        setSettingsTab('email');
-                        setSettingsOpen(true);
-                      }}
-                    >
-                      Open Settings →
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="email-modal-inputs">
-                <label className="field">
-                  <span>Customer Email Address</span>
-                  <input
-                    type="email"
-                    autoFocus
-                    placeholder="customer@example.com"
-                    value={emailRecipient}
-                    onChange={(e) => setEmailRecipient(e.target.value)}
-                    disabled={emailSending}
-                  />
-                </label>
-
-                <label className="field">
-                  <span>Subject Line</span>
-                  <input
-                    type="text"
-                    placeholder="Repair Order Subject"
-                    value={emailSubject}
-                    onChange={(e) => setEmailSubject(e.target.value)}
-                    disabled={emailSending}
-                  />
-                </label>
-
-                <label className="field">
-                  <span>Personal Note / Email Body</span>
-                  <textarea
-                    rows={3}
-                    placeholder="Thank you for bringing your vehicle to Katia Auto Sales & Repairs. Attached is your official repair order..."
-                    value={emailCustomNote}
-                    onChange={(e) => setEmailCustomNote(e.target.value)}
-                    disabled={emailSending}
-                  />
-                </label>
-
-                <div className="email-modal-attachment-chip">
-                  <div className="attachment-icon">📄</div>
-                  <div className="attachment-meta">
-                    <strong>{emailModalOrder.orderNumber}.pdf</strong>
-                    <span>
-                      Official Landscape PDF Invoice · Auto-attached via Gmail
-                      API
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {emailModalError && (
-                <div className="email-modal-error-box">
-                  <span>⚠</span>
-                  <span>{emailModalError}</span>
-                </div>
-              )}
-
-              <p className="email-modal-confirmation-notice">
-                Please review details before sending. Clicking send will deliver
-                this invoice directly from your connected Google account (
-                <strong>{gmailStatus?.email || 'Gmail'}</strong>).
-              </p>
-
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="secondary-button"
-                  disabled={emailSending}
-                  onClick={closeEmailModal}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="primary-button"
-                  disabled={
-                    emailSending ||
-                    !emailRecipient.trim() ||
-                    !emailSubject.trim() ||
-                    !gmailStatus?.connected
-                  }
-                  onClick={() => void sendOrderEmail()}
-                >
-                  {emailSending
-                    ? 'Sending via Gmail API…'
-                    : 'Send Invoice via Gmail'}
-                </button>
-              </div>
-            </div>
-          </div>
+        {emailDraft && (
+          <EmailOrderModal
+            draft={emailDraft}
+            sending={emailSending}
+            error={emailModalError}
+            onChange={(changes) =>
+              setEmailDraft((current) =>
+                current ? { ...current, ...changes } : current,
+              )
+            }
+            onClose={closeEmailModal}
+            onSend={() => void sendEmailDraft()}
+            onOpenSettings={() => {
+              setEmailDraft(null);
+              setSettingsTab('email');
+              setSettingsOpen(true);
+            }}
+          />
         )}
         {pendingDiscard && (
           <div
