@@ -317,17 +317,53 @@ function modernReceiptHtml(
   .blank-lines-table tbody td {
     border-bottom: 0.5pt solid #cbd5e1;
   }
+  .blank-totals-table {
+    width: 195pt;
+    border-collapse: collapse;
+  }
   .blank-totals-table td {
-    padding: 2.5pt 0;
+    padding: 3pt 0;
+    vertical-align: bottom;
   }
-  .blank-totals-table .num {
-    color: #94a3b8;
-    border-bottom: 0.5pt solid #cbd5e1;
+  .blank-totals-table .blank-amount-cell {
+    text-align: left !important;
+    width: 85pt;
+    padding-left: 6pt !important;
+    padding-right: 0 !important;
+    border-bottom: 0.75pt solid #cbd5e1;
   }
-  .total-card-blank strong {
-    font-size: 19pt;
+  .blank-totals-table .dollar-sign {
+    color: #475569;
+    font-weight: 700;
+    font-size: 8pt;
+    display: inline-block;
+  }
+  .blank-totals-table .grand .blank-amount-cell {
+    border-bottom: 1.25pt solid #0f172a;
+    padding-top: 6pt;
+  }
+  .blank-totals-table .grand .dollar-sign {
+    color: #0f172a;
+    font-size: 11pt;
+    font-weight: 800;
+  }
+  .total-card-blank .total-blank-line {
+    display: flex;
+    align-items: flex-end;
+    gap: 4pt;
+    margin-top: 3pt;
+  }
+  .total-card-blank .total-dollar {
+    font-size: 20pt;
+    font-weight: 800;
     color: #94a3b8;
-    letter-spacing: 0.05em;
+    line-height: 1;
+  }
+  .total-card-blank .total-write-rule {
+    flex: 1;
+    border-bottom: 1.5pt solid #475569;
+    height: 18pt;
+    margin-bottom: 2pt;
   }
   label {
     display: block;
@@ -502,7 +538,7 @@ function modernReceiptHtml(
       </div>
       <div class="total-card total-card-blank">
         <label>Total amount</label>
-        <strong>$ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</strong>
+        <div class="total-blank-line"><span class="total-dollar">$</span><span class="total-write-rule"></span></div>
       </div>
     </section>
 
@@ -588,11 +624,11 @@ function modernReceiptHtml(
     <section class="summary">
       <div class="summary-notes"></div>
       <table class="totals blank-totals-table">
-        <tr><td>Labor</td><td class="num">$ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td></tr>
-        <tr><td>Parts</td><td class="num">$ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td></tr>
-        <tr><td>Sublet / Other</td><td class="num">$ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td></tr>
-        <tr><td>Tax</td><td class="num">$ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td></tr>
-        <tr class="grand"><td>Total amount</td><td class="num">$ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td></tr>
+        <tr><td>Labor</td><td class="num blank-amount-cell"><span class="dollar-sign">$</span></td></tr>
+        <tr><td>Parts</td><td class="num blank-amount-cell"><span class="dollar-sign">$</span></td></tr>
+        <tr><td>Sublet / Other</td><td class="num blank-amount-cell"><span class="dollar-sign">$</span></td></tr>
+        <tr><td>Tax</td><td class="num blank-amount-cell"><span class="dollar-sign">$</span></td></tr>
+        <tr class="grand"><td>Total amount</td><td class="num blank-amount-cell"><span class="dollar-sign">$</span></td></tr>
       </table>
     </section>`
         : `<section class="hero">

@@ -63,8 +63,16 @@ assert.ok(
   modernHtml.includes('RO-___________'),
   'Modern blank receipt must render write-in order number',
 );
+assert.ok(
+  modernHtml.includes('blank-amount-cell'),
+  'Modern blank receipt must use blank-amount-cell',
+);
+assert.ok(
+  !modernHtml.includes('$ &nbsp;&nbsp;'),
+  'Modern blank receipt must not push dollar sign with trailing &nbsp; spaces',
+);
 console.log(
-  '✓ Modern blank receipt verified: zero $0.00 occurrences, write lines present',
+  '✓ Modern blank receipt verified: zero $0.00 occurrences, write lines present, dollar signs on left',
 );
 
 // 2. Classic blank template
@@ -78,9 +86,9 @@ assert.ok(
   'Classic blank receipt must not contain $0.00',
 );
 assert.ok(
-  classicHtml.includes('write-line') || classicHtml.includes('&nbsp;'),
-  'Classic blank receipt must include write-in spaces',
+  classicHtml.includes('blank-amount-cell'),
+  'Classic blank receipt must use blank-amount-cell',
 );
 console.log(
-  '✓ Classic blank receipt verified: zero $0.00 occurrences, write spaces present',
+  '✓ Classic blank receipt verified: zero $0.00 occurrences, write spaces present, dollar signs on left',
 );

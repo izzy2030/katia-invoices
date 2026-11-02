@@ -405,6 +405,7 @@ export function classicReceiptHtml(
   .totals-table { width: 100%; border: 1px solid #cbd5e1; height: 100%; }
   .totals-table td { padding: 2.5px 5px; font-size: 8.5px; border: 0; border-bottom: 1px solid #f1f5f9; }
   .totals-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  .totals-table td.blank-amount-cell { text-align: left !important; padding-left: 6px !important; color: #475569; font-weight: 700; }
   .grand-row td { background: #f1f5f9; border-top: 2px solid #1d4ed8 !important; border-bottom: 0 !important; font-weight: 800; font-size: 10.5px; color: #0f172a; padding: 4px 6px; }
   .grand-row .amount { color: #1d4ed8; font-size: 11px; }
   </style></head><body>
@@ -475,14 +476,14 @@ export function classicReceiptHtml(
             </div>
             <div class="totals-side">
               <table class="totals-table">
-                <tr><td>Total labor</td><td class="amount">${isBlank ? '&nbsp;' : money(totals.labor)}</td></tr>
-                <tr><td>Total parts</td><td class="amount">${isBlank ? '&nbsp;' : money(totals.parts)}</td></tr>
-                <tr><td>Total sublet</td><td class="amount">${isBlank ? '&nbsp;' : money(totals.sublet)}</td></tr>
-                <tr><td>Gas, oil and grease</td><td class="amount">${isBlank ? '&nbsp;' : money(totals.fluids)}</td></tr>
-                <tr><td>EPA / waste disposal</td><td class="amount">${isBlank ? '&nbsp;' : money(totals.disposal)}</td></tr>
-                <tr><td>Other</td><td class="amount">${isBlank ? '&nbsp;' : money(totals.other)}</td></tr>
-                <tr><td>${e(taxLabel)}</td><td class="amount">${isBlank ? '&nbsp;' : money(totals.tax)}</td></tr>
-                <tr class="grand-row"><td>TOTAL AMOUNT</td><td class="amount">${isBlank ? '&nbsp;' : money(totals.total)}</td></tr>
+                <tr><td>Total labor</td><td class="amount ${isBlank ? 'blank-amount-cell' : ''}">${isBlank ? '$' : money(totals.labor)}</td></tr>
+                <tr><td>Total parts</td><td class="amount ${isBlank ? 'blank-amount-cell' : ''}">${isBlank ? '$' : money(totals.parts)}</td></tr>
+                <tr><td>Total sublet</td><td class="amount ${isBlank ? 'blank-amount-cell' : ''}">${isBlank ? '$' : money(totals.sublet)}</td></tr>
+                <tr><td>Gas, oil and grease</td><td class="amount ${isBlank ? 'blank-amount-cell' : ''}">${isBlank ? '$' : money(totals.fluids)}</td></tr>
+                <tr><td>EPA / waste disposal</td><td class="amount ${isBlank ? 'blank-amount-cell' : ''}">${isBlank ? '$' : money(totals.disposal)}</td></tr>
+                <tr><td>Other</td><td class="amount ${isBlank ? 'blank-amount-cell' : ''}">${isBlank ? '$' : money(totals.other)}</td></tr>
+                <tr><td>${e(taxLabel)}</td><td class="amount ${isBlank ? 'blank-amount-cell' : ''}">${isBlank ? '$' : money(totals.tax)}</td></tr>
+                <tr class="grand-row"><td>TOTAL AMOUNT</td><td class="amount ${isBlank ? 'blank-amount-cell' : ''}">${isBlank ? '$' : money(totals.total)}</td></tr>
               </table>
             </div>
           </div>
