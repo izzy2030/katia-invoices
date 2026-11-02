@@ -161,6 +161,28 @@ function Field({
   );
 }
 
+function SwitchVehicleIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 8h16" />
+      <path d="m16 4 4 4-4 4" />
+      <path d="M20 16H4" />
+      <path d="m8 12-4 4 4 4" />
+    </svg>
+  );
+}
+
 function App() {
   const [orders, setOrders] = useState<WorkOrder[]>([]);
   const [form, setForm] = useState<WorkOrderInput>(emptyOrder);
@@ -228,6 +250,7 @@ function App() {
   } | null>(null);
   const [emailModalError, setEmailModalError] = useState('');
   const [showAddress, setShowAddress] = useState(false);
+  const [switchVehicleOpen, setSwitchVehicleOpen] = useState(false);
 
   useEffect(() => {
     void window.repairDesk
@@ -480,6 +503,45 @@ function App() {
     }));
   };
 
+  const matchingCustomer = useMemo(() => {
+    if (form.customerKey) {
+      const byKey = customers.find((c) => c.key === form.customerKey);
+      if (byKey) return byKey;
+    }
+    const nameTrimmed = form.customerName.trim().toLowerCase();
+    if (nameTrimmed) {
+      const byName = customers.find(
+        (c) => c.name.trim().toLowerCase() === nameTrimmed,
+      );
+      if (byName) return byName;
+    }
+    const phoneDigits = form.phone.replace(/\D/g, '');
+    if (phoneDigits && phoneDigits.length >= 7) {
+      const byPhone = customers.find((c) =>
+        c.phone.replace(/\D/g, '').includes(phoneDigits),
+      );
+      if (byPhone) return byPhone;
+    }
+    return null;
+  }, [form.customerKey, form.customerName, form.phone, customers]);
+
+  const matchingCustomerVehicles = useMemo(
+    () => matchingCustomer?.vehicles ?? [],
+    [matchingCustomer],
+  );
+
+  function handleSelectVehicle(vehicle: CustomerVehicle) {
+    setForm((current) => ({
+      ...current,
+      vehicleYear: vehicle.vehicleYear,
+      vehicleMake: vehicle.vehicleMake,
+      vehicleModel: vehicle.vehicleModel,
+      vin: vehicle.vin,
+      licensePlate: vehicle.licensePlate,
+    }));
+    setSwitchVehicleOpen(false);
+  }
+
   function startNewOrder() {
     setNotice('');
     setSettingsOpen(false);
@@ -488,6 +550,7 @@ function App() {
     setDuplicateOf(null);
     setReturnCustomerKey(null);
     setShowAddress(false);
+    setSwitchVehicleOpen(false);
     setForm(blankOrder(savedTaxRate, shopDefaults, shopSettings));
     setCreating(true);
   }
@@ -631,6 +694,7 @@ function App() {
     setReturnCustomerKey(returnCustomer);
     if (returnCustomer) setSelectedCustomerKey(returnCustomer);
     setShowAddress(Boolean(order.address?.trim()));
+    setSwitchVehicleOpen(false);
     setForm({
       ...editableOrder(order),
       customerKey: orderCustomerKey(order, customerContacts),
@@ -644,6 +708,7 @@ function App() {
       customerKey: orderCustomerKey(order, customerContacts),
     };
     setShowAddress(Boolean(copy.address?.trim()));
+    setSwitchVehicleOpen(false);
     const rate = copy.taxRate?.trim() ? copy.taxRate : savedTaxRate;
     setNotice('');
     setSettingsOpen(false);
@@ -1402,12 +1467,33 @@ function App() {
                   </section>
 
                   <section className="form-card">
-                    <div className="card-heading">
-                      <div className="step-number">02</div>
-                      <div>
-                        <h2>Vehicle details</h2>
-                        <p>Identify the vehicle for this repair.</p>
+                    <div className="card-heading card-heading-with-actions">
+                      <div className="card-heading-main">
+                        <div className="step-number">02</div>
+                        <div>
+                          <h2>Vehicle details</h2>
+                          <p>Identify the vehicle for this repair.</p>
+                        </div>
                       </div>
+                      <button
+                        type="button"
+                        className={`switch-vehicle-btn ${matchingCustomerVehicles.length > 1 ? 'has-multiple' : ''}`}
+                        onClick={() => setSwitchVehicleOpen(true)}
+                        title={
+                          matchingCustomerVehicles.length > 1
+                            ? `Switch vehicle (${matchingCustomerVehicles.length} available for this customer)`
+                            : 'Switch vehicle'
+                        }
+                        aria-label="Switch vehicle"
+                      >
+                        <SwitchVehicleIcon />
+                        <span>Switch vehicle</span>
+                        {matchingCustomerVehicles.length > 1 && (
+                          <span className="switch-count-badge">
+                            {matchingCustomerVehicles.length}
+                          </span>
+                        )}
+                      </button>
                     </div>
                     <div className="form-grid vehicle-grid">
                       <Field
@@ -2127,6 +2213,131 @@ function App() {
                   onClick={() => void deleteOrder()}
                 >
                   {busy ? 'Deleting…' : 'Delete order'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {switchVehicleOpen && (
+          <div
+            className="modal-backdrop"
+            role="presentation"
+            onClick={() => setSwitchVehicleOpen(false)}
+          >
+            <div
+              className="modal-card switch-vehicle-modal-card"
+              role="dialog"
+              aria-labelledby="switch-vehicle-dialog-title"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="switch-vehicle-modal-head">
+                <div>
+                  <h2 id="switch-vehicle-dialog-title">Switch Vehicle</h2>
+                  <p>
+                    {matchingCustomer
+                      ? `Select a vehicle for ${matchingCustomer.name}`
+                      : 'Choose a vehicle for this repair order'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="modal-close-icon-btn"
+                  onClick={() => setSwitchVehicleOpen(false)}
+                  aria-label="Close dialog"
+                >
+                  ×
+                </button>
+              </div>
+
+              {matchingCustomerVehicles.length > 0 ? (
+                <div className="switch-vehicle-list">
+                  {matchingCustomerVehicles.map((vehicle) => {
+                    const isCurrent =
+                      form.vin && vehicle.vin
+                        ? form.vin.trim().toLowerCase() ===
+                          vehicle.vin.trim().toLowerCase()
+                        : form.licensePlate && vehicle.licensePlate
+                          ? form.licensePlate.trim().toLowerCase() ===
+                            vehicle.licensePlate.trim().toLowerCase()
+                          : [
+                              form.vehicleYear,
+                              form.vehicleMake,
+                              form.vehicleModel,
+                            ]
+                              .filter(Boolean)
+                              .join(' ')
+                              .toLowerCase() === vehicle.label.toLowerCase();
+
+                    return (
+                      <div
+                        key={vehicle.key}
+                        className={`switch-vehicle-item ${isCurrent ? 'is-current' : ''}`}
+                        onClick={() => handleSelectVehicle(vehicle)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleSelectVehicle(vehicle);
+                          }
+                        }}
+                      >
+                        <div className="switch-vehicle-info">
+                          <div className="switch-vehicle-name">
+                            <strong>{vehicle.label}</strong>
+                            {isCurrent && (
+                              <span className="current-vehicle-pill">
+                                Current
+                              </span>
+                            )}
+                          </div>
+                          <div className="switch-vehicle-meta">
+                            {[vehicle.licensePlate, vehicle.vin]
+                              .filter(Boolean)
+                              .join(' · ') || 'No plate or VIN on file'}
+                          </div>
+                          {vehicle.orders.length > 0 && (
+                            <small className="switch-vehicle-orders">
+                              {vehicle.orders.length}{' '}
+                              {vehicle.orders.length === 1 ? 'order' : 'orders'}{' '}
+                              on file
+                              {vehicle.lastVisit
+                                ? ` · Last visit ${vehicle.lastVisit}`
+                                : ''}
+                            </small>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          className="secondary-button switch-select-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectVehicle(vehicle);
+                          }}
+                        >
+                          {isCurrent ? 'Selected' : 'Select'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="switch-vehicle-empty">
+                  <p>
+                    {matchingCustomer
+                      ? `${matchingCustomer.name} has no vehicles on file yet.`
+                      : 'No customer selected yet. Enter a customer name or pick one from "Autofill from history" above to view their vehicles.'}
+                  </p>
+                </div>
+              )}
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setSwitchVehicleOpen(false)}
+                >
+                  Close
                 </button>
               </div>
             </div>

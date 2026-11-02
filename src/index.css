@@ -1500,6 +1500,191 @@ tbody tr:hover {
   margin-bottom: 16px;
 }
 
+.card-heading-with-actions {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.card-heading-main {
+  align-items: center;
+  display: flex;
+  gap: 11px;
+}
+
+.switch-vehicle-btn {
+  align-items: center;
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12.5px;
+  font-weight: 600;
+  gap: 6px;
+  padding: 5px 12px;
+  transition: all 0.14s ease;
+}
+
+.switch-vehicle-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent-strong);
+}
+
+.switch-vehicle-btn.has-multiple {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent-strong);
+}
+
+.switch-vehicle-btn.has-multiple:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff !important;
+}
+
+[data-theme='abyssal'] .switch-vehicle-btn.has-multiple {
+  background: rgba(37, 99, 235, 0.15);
+  border-color: rgba(37, 99, 235, 0.35);
+  color: #60a5fa;
+}
+
+[data-theme='abyssal'] .switch-vehicle-btn.has-multiple:hover {
+  background: var(--accent);
+  color: #fff !important;
+}
+
+.switch-count-badge {
+  background: var(--accent);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 6px;
+}
+
+.switch-vehicle-btn.has-multiple:hover .switch-count-badge {
+  background: #fff;
+  color: var(--accent);
+}
+
+/* Switch Vehicle Modal Dialog */
+.switch-vehicle-modal-card {
+  max-width: 500px;
+  width: 100%;
+}
+
+.switch-vehicle-modal-head {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.switch-vehicle-modal-head h2 {
+  color: var(--ink);
+  font:
+    700 18px Manrope,
+    sans-serif;
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+
+.switch-vehicle-modal-head p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.switch-vehicle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 14px 0;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.switch-vehicle-item {
+  align-items: center;
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 14px;
+  transition: all 0.14s ease;
+}
+
+.switch-vehicle-item:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent-border);
+}
+
+.switch-vehicle-item.is-current {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+}
+
+.switch-vehicle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.switch-vehicle-name {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.switch-vehicle-name strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.current-vehicle-pill {
+  background: var(--accent);
+  border-radius: var(--radius-xs, 4px);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+}
+
+.switch-vehicle-meta {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.switch-vehicle-orders {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.switch-select-btn {
+  font-size: 12.5px;
+  padding: 5px 12px;
+}
+
+.switch-vehicle-empty {
+  background: var(--surface-subtle);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-md);
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.switch-vehicle-empty p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
 .step-number {
   align-items: center;
   background: var(--accent-soft);
