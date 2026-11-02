@@ -243,7 +243,7 @@ export default function GmailTab({
                         className="gmail-cloud-link"
                         onClick={(e) => {
                           e.preventDefault();
-                          void window.repairDesk.openPath(
+                          void window.repairDesk.openExternal(
                             'https://console.cloud.google.com/apis/credentials',
                           );
                         }}
@@ -259,6 +259,16 @@ export default function GmailTab({
                 <div className="settings-test-feedback error">
                   <AlertCircle size={16} />
                   <span>{gmailError}</span>
+                </div>
+              )}
+
+              {gmailStatus?.needsReconnect && (
+                <div className="settings-test-feedback error">
+                  <AlertCircle size={16} />
+                  <span>
+                    Google authorization expired or was revoked. Reconnect to
+                    keep sending invoices.
+                  </span>
                 </div>
               )}
 

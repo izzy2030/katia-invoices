@@ -26,6 +26,7 @@ export { buildKatiaEmailBrandHeader };
 export interface GmailConnectionStatus {
   connected: boolean;
   email?: string;
+  needsReconnect?: boolean;
   hasClientCredentials: boolean;
   clientId?: string;
 }
@@ -76,11 +77,16 @@ export async function getGmailStatus(
   }
 
   // If token is expired or within 3 minutes of expiry, try a quick refresh to confirm validity
-  if (
-    stored.refreshToken &&
-    stored.expiryDate - Date.now() < 180000 &&
-    credentials
-  ) {
+  if (stored.expiryDate - Date.now() < 180000) {
+    if (!stored.refreshToken || !credentials) {
+      return {
+        connected: false,
+        needsReconnect: true,
+        hasClientCredentials: Boolean(credentials?.clientId),
+        clientId: credentials?.clientId,
+      };
+    }
+
     try {
       const refreshed = await refreshGoogleAccessToken({
         refreshToken: stored.refreshToken,
@@ -96,16 +102,16 @@ export async function getGmailStatus(
         'Background Gmail token refresh failed on status check:',
         err,
       );
-      // If refresh failed because token was revoked, clear credentials
       const msg = String(err);
       if (msg.includes('invalid_grant') || msg.includes('revoked')) {
         clearStoredGmailTokens(db);
-        return {
-          connected: false,
-          hasClientCredentials: Boolean(credentials?.clientId),
-          clientId: credentials?.clientId,
-        };
       }
+      return {
+        connected: false,
+        needsReconnect: true,
+        hasClientCredentials: Boolean(credentials?.clientId),
+        clientId: credentials?.clientId,
+      };
     }
   }
 

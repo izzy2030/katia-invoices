@@ -12,6 +12,7 @@ export type SettingsTab =
 export interface GmailStatus {
   connected: boolean;
   email?: string;
+  needsReconnect?: boolean;
   hasClientCredentials: boolean;
   clientId?: string;
 }

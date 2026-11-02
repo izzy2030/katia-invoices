@@ -54,6 +54,7 @@ interface Window {
     ) => Promise<{ success: boolean; error?: string }>;
     printBlankOrder: () => Promise<{ success: boolean; error?: string }>;
     openPath: (targetPath: string) => Promise<boolean>;
+    openExternal: (targetUrl: string) => Promise<boolean>;
     exportBackupJson: () => Promise<boolean>;
     exportBackupSqlite: () => Promise<boolean>;
     importBackup: (mode?: BackupImportMode) => Promise<BackupImportResult>;
@@ -85,6 +86,7 @@ interface Window {
     getGmailStatus: () => Promise<{
       connected: boolean;
       email?: string;
+      needsReconnect?: boolean;
       hasClientCredentials: boolean;
       clientId?: string;
     }>;

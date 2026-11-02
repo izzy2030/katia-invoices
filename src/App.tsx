@@ -1,5 +1,6 @@
 import ChargeRows from './ChargeRows';
 import CustomersView from './Customers';
+import { resolveEmailRoute } from './emailRouting';
 import CustomerAutofillSearch from './CustomerAutofillSearch';
 import ExpandableCustomerNotes from './ExpandableCustomerNotes';
 import WorkOrderCharges from './WorkOrderCharges';
@@ -239,6 +240,9 @@ function App() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [duplicateOf, setDuplicateOf] = useState<WorkOrder | null>(null);
   const [pendingDelete, setPendingDelete] = useState<WorkOrder | null>(null);
+  const [pendingDiscard, setPendingDiscard] = useState<{
+    action: () => void;
+  } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('shop');
   const [customersOpen, setCustomersOpen] = useState(false);
@@ -421,10 +425,12 @@ function App() {
           searchInput.select();
         }
       } else if (event.key === 'Escape') {
-        if (pendingDelete) {
+        if (pendingDiscard) {
+          setPendingDiscard(null);
+        } else if (pendingDelete) {
           setPendingDelete(null);
         } else if (creating) {
-          closeOrderForm();
+          guardDraft(closeOrderForm);
         } else if (dueFilterActive) {
           setDueFilterActive(false);
         } else if (query) {
@@ -434,7 +440,15 @@ function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [creating, pendingDelete, dueFilterActive, query]);
+  }, [
+    creating,
+    pendingDelete,
+    pendingDiscard,
+    dueFilterActive,
+    query,
+    form,
+    editingId,
+  ]);
 
   const openOrdersCount = useMemo(
     () =>
@@ -588,7 +602,21 @@ function App() {
     setSwitchVehicleOpen(false);
   }
 
-  function startNewOrder() {
+  function guardDraft(action: () => void) {
+    if (isOrderBeingFilled(form, Boolean(editingId))) {
+      setPendingDiscard({ action });
+      return;
+    }
+    action();
+  }
+
+  function discardDraftAndContinue() {
+    const action = pendingDiscard?.action;
+    setPendingDiscard(null);
+    action?.();
+  }
+
+  function startNewOrderNow() {
     setNotice('');
     setSettingsOpen(false);
     setCustomersOpen(false);
@@ -601,7 +629,11 @@ function App() {
     setCreating(true);
   }
 
-  function openCustomers() {
+  function startNewOrder() {
+    guardDraft(startNewOrderNow);
+  }
+
+  function openCustomersNow() {
     setNotice('');
     setSettingsOpen(false);
     setCreating(false);
@@ -610,6 +642,23 @@ function App() {
     setReturnCustomerKey(null);
     if (!customersOpen) setSelectedCustomerKey(null);
     setCustomersOpen(true);
+  }
+
+  function openCustomers() {
+    guardDraft(openCustomersNow);
+  }
+
+  function openDashboardNow() {
+    setSettingsOpen(false);
+    setCustomersOpen(false);
+    setEditingId(null);
+    setDuplicateOf(null);
+    setReturnCustomerKey(null);
+    setCreating(false);
+  }
+
+  function openDashboard() {
+    guardDraft(openDashboardNow);
   }
 
   async function saveCustomerContact(contact: CustomerContact) {
@@ -665,7 +714,7 @@ function App() {
     }
   }
 
-  function openTaxSettings(tab: SettingsTab | unknown = 'shop') {
+  function openTaxSettingsNow(tab: SettingsTab | unknown = 'shop') {
     const targetTab: SettingsTab =
       typeof tab === 'string' &&
       ['shop', 'taxes', 'email', 'appearance', 'backup'].includes(tab)
@@ -679,6 +728,10 @@ function App() {
     setReturnCustomerKey(null);
     setSettingsTab(targetTab);
     setSettingsOpen(true);
+  }
+
+  function openTaxSettings(tab: SettingsTab | unknown = 'shop') {
+    guardDraft(() => openTaxSettingsNow(tab));
   }
 
   function startFromHistory(
@@ -814,7 +867,7 @@ function App() {
     const returnCustomer = returnCustomerKey;
     setEditingId(null);
     setDuplicateOf(null);
-    setForm(blankOrder(savedTaxRate, shopDefaults));
+    setForm(blankOrder(savedTaxRate, shopDefaults, shopSettings));
     setCreating(false);
     setNotice('');
     setReturnCustomerKey(null);
@@ -830,43 +883,14 @@ function App() {
     senderDescription: string;
   }> {
     try {
-      const [gmail, emailSettings] = await Promise.all([
-        window.repairDesk.getGmailStatus().catch(() => null),
-        window.repairDesk.getEmailSettings().catch(() => null),
-      ]);
-
-      if (gmail?.connected) {
+      const route = resolveEmailRoute(await window.repairDesk.getGmailStatus());
+      if (route.kind === 'gmail') {
         return {
           configured: true,
           provider: 'gmail',
-          senderDescription: gmail.email
-            ? `connected Gmail (${gmail.email})`
-            : 'connected Gmail',
+          senderDescription: route.senderDescription,
         };
       }
-
-      if (
-        emailSettings?.resendApiKey?.trim() &&
-        emailSettings?.resendFromEmail?.trim()
-      ) {
-        return {
-          configured: true,
-          provider: 'resend',
-          senderDescription: `Resend (${emailSettings.resendFromEmail.trim()})`,
-        };
-      }
-
-      if (
-        emailSettings?.gmailUser?.trim() &&
-        emailSettings?.gmailAppPassword?.trim()
-      ) {
-        return {
-          configured: true,
-          provider: 'gmail',
-          senderDescription: `Gmail SMTP (${emailSettings.gmailUser.trim()})`,
-        };
-      }
-
       return { configured: false, provider: null, senderDescription: '' };
     } catch {
       return { configured: false, provider: null, senderDescription: '' };
@@ -894,7 +918,8 @@ function App() {
     setPostSaveEmailError('');
     const order = postSaveEmailPrompt.order;
     try {
-      if (postSaveEmailPrompt.provider === 'gmail' && gmailStatus?.connected) {
+      const gmail = await window.repairDesk.getGmailStatus().catch(() => null);
+      if (resolveEmailRoute(gmail).kind === 'gmail') {
         await window.repairDesk.sendGmailOrderEmail({
           orderId: order.id,
           recipient,
@@ -938,7 +963,13 @@ function App() {
         setSavedTaxRate(form.taxRate.trim());
       setEditingId(null);
       setDuplicateOf(null);
-      setForm(blankOrder(form.taxRate?.trim() || savedTaxRate, shopDefaults));
+      setForm(
+        blankOrder(
+          form.taxRate?.trim() || savedTaxRate,
+          shopDefaults,
+          shopSettings,
+        ),
+      );
       setReturnCustomerKey(null);
       if (returnCustomer) {
         setSelectedCustomerKey(orderCustomerKey(saved, customerContacts));
@@ -1354,14 +1385,7 @@ function App() {
           <div className="nav-caption">WORKSPACE</div>
           <button
             className={`nav-item ${!creating && !settingsOpen && !customersOpen ? 'active' : ''}`}
-            onClick={() => {
-              setSettingsOpen(false);
-              setCustomersOpen(false);
-              setEditingId(null);
-              setDuplicateOf(null);
-              setReturnCustomerKey(null);
-              setCreating(false);
-            }}
+            onClick={openDashboard}
           >
             <span className="nav-icon">▦</span> Repair orders
             <span className="nav-count">{orders.length}</span>
@@ -2543,6 +2567,45 @@ function App() {
                   {emailSending
                     ? 'Sending via Gmail API…'
                     : 'Send Invoice via Gmail'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {pendingDiscard && (
+          <div
+            className="modal-backdrop"
+            role="presentation"
+            onClick={() => setPendingDiscard(null)}
+          >
+            <div
+              aria-labelledby="discard-draft-title"
+              aria-modal="true"
+              className="modal-card"
+              role="dialog"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="modal-mark">!</div>
+              <h2 id="discard-draft-title">Discard this draft?</h2>
+              <p>
+                This repair order has details that are not saved yet. Leaving
+                now will discard them.
+              </p>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  autoFocus
+                  onClick={() => setPendingDiscard(null)}
+                >
+                  Keep editing
+                </button>
+                <button
+                  type="button"
+                  className="danger-button"
+                  onClick={discardDraftAndContinue}
+                >
+                  Discard draft
                 </button>
               </div>
             </div>

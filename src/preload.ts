@@ -40,6 +40,8 @@ contextBridge.exposeInMainWorld('repairDesk', {
   printBlankOrder: () => ipcRenderer.invoke('work-orders:print-blank'),
   openPath: (targetPath: string) =>
     ipcRenderer.invoke('shell:open-path', targetPath),
+  openExternal: (targetUrl: string) =>
+    ipcRenderer.invoke('shell:open-external', targetUrl),
   exportBackupJson: () => ipcRenderer.invoke('backup:export-json'),
   exportBackupSqlite: () => ipcRenderer.invoke('backup:export-sqlite'),
   importBackup: (mode?: BackupImportMode) =>

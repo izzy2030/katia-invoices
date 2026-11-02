@@ -5,6 +5,7 @@ import {
   type CustomerContact,
 } from './customerHistory';
 import { receiptHtml } from './receipt';
+import { escapeHtml } from './html';
 import {
   builtInTaxDefaults,
   normalizeDashboardPreferences,
@@ -532,11 +533,6 @@ function saveWorkOrder(input: WorkOrderInput): WorkOrder {
         "INSERT INTO app_settings (key, value) VALUES ('next_order_number', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
       )
       .run(String(Number(nextNumber) + 1));
-    database
-      .prepare(
-        "INSERT INTO app_settings (key, value) VALUES ('tax_rate', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      )
-      .run((input.taxRate ?? '').trim());
     database.exec('COMMIT;');
   } catch (error) {
     database.exec('ROLLBACK;');
@@ -1484,10 +1480,10 @@ async function sendOrderEmail(
         subtitle: '1005 Rural St, Aurora, IL 60505 · Tel: (630) 907-7198',
       })}
       <p style="font-size: 15px; color: #1e293b; margin: 0 0 12px;">
-        Hello <strong>${order.customerName}</strong>,
+        Hello <strong>${escapeHtml(order.customerName)}</strong>,
       </p>
       <p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 20px;">
-        ${messageBody.replace(/\n/g, '<br/>')}
+        ${escapeHtml(messageBody).replace(/\n/g, '<br/>')}
       </p>
       <div style="margin: 20px 0; padding: 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
         <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
@@ -1497,25 +1493,25 @@ async function sendOrderEmail(
           </tr>
           <tr>
             <td style="padding: 6px 0; color: #64748b;">Vehicle:</td>
-            <td style="padding: 6px 0; font-weight: 600; color: #0f172a; text-align: right;">${vehicleName}</td>
+            <td style="padding: 6px 0; font-weight: 600; color: #0f172a; text-align: right;">${escapeHtml(vehicleName)}</td>
           </tr>
           ${
             order.vin
-              ? `<tr><td style="padding: 6px 0; color: #64748b;">VIN:</td><td style="padding: 6px 0; color: #0f172a; text-align: right; font-family: monospace;">${order.vin}</td></tr>`
+              ? `<tr><td style="padding: 6px 0; color: #64748b;">VIN:</td><td style="padding: 6px 0; color: #0f172a; text-align: right; font-family: monospace;">${escapeHtml(order.vin)}</td></tr>`
               : ''
           }
           ${
             order.licensePlate
-              ? `<tr><td style="padding: 6px 0; color: #64748b;">License Plate:</td><td style="padding: 6px 0; color: #0f172a; text-align: right;">${order.licensePlate}</td></tr>`
+              ? `<tr><td style="padding: 6px 0; color: #64748b;">License Plate:</td><td style="padding: 6px 0; color: #0f172a; text-align: right;">${escapeHtml(order.licensePlate)}</td></tr>`
               : ''
           }
           <tr>
             <td style="padding: 6px 0; color: #64748b;">Date In:</td>
-            <td style="padding: 6px 0; color: #0f172a; text-align: right;">${order.dateIn}</td>
+            <td style="padding: 6px 0; color: #0f172a; text-align: right;">${escapeHtml(order.dateIn)}</td>
           </tr>
           ${
             order.datePromised
-              ? `<tr><td style="padding: 6px 0; color: #64748b;">Delivery Date:</td><td style="padding: 6px 0; color: #0f172a; text-align: right;">${order.datePromised}</td></tr>`
+              ? `<tr><td style="padding: 6px 0; color: #64748b;">Delivery Date:</td><td style="padding: 6px 0; color: #0f172a; text-align: right;">${escapeHtml(order.datePromised)}</td></tr>`
               : ''
           }
           <tr style="border-top: 1px solid #cbd5e1;">
@@ -1637,10 +1633,10 @@ async function handleSendGmailOrderEmail(options: {
         subtitle: `${shopSettings.shopAddress || '1005 Rural St, Aurora, IL 60505'} · Tel: ${shopSettings.shopPhone || '(630) 907-7198'}`,
       })}
       <p style="font-size: 15px; color: #1e293b; margin: 0 0 12px;">
-        Hello <strong>${fullOrder.customerName}</strong>,
+        Hello <strong>${escapeHtml(fullOrder.customerName)}</strong>,
       </p>
       <p style="font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 20px;">
-        ${note.replace(/\n/g, '<br/>')}
+        ${escapeHtml(note).replace(/\n/g, '<br/>')}
       </p>
       <div style="margin: 20px 0; padding: 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
         <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
@@ -1650,21 +1646,21 @@ async function handleSendGmailOrderEmail(options: {
           </tr>
           <tr>
             <td style="padding: 6px 0; color: #64748b;">Vehicle:</td>
-            <td style="padding: 6px 0; font-weight: 600; color: #0f172a; text-align: right;">${vehicleName}</td>
+            <td style="padding: 6px 0; font-weight: 600; color: #0f172a; text-align: right;">${escapeHtml(vehicleName)}</td>
           </tr>
           ${
             fullOrder.vin
-              ? `<tr><td style="padding: 6px 0; color: #64748b;">VIN:</td><td style="padding: 6px 0; color: #0f172a; text-align: right; font-family: monospace;">${fullOrder.vin}</td></tr>`
+              ? `<tr><td style="padding: 6px 0; color: #64748b;">VIN:</td><td style="padding: 6px 0; color: #0f172a; text-align: right; font-family: monospace;">${escapeHtml(fullOrder.vin)}</td></tr>`
               : ''
           }
           ${
             fullOrder.licensePlate
-              ? `<tr><td style="padding: 6px 0; color: #64748b;">License Plate:</td><td style="padding: 6px 0; color: #0f172a; text-align: right;">${fullOrder.licensePlate}</td></tr>`
+              ? `<tr><td style="padding: 6px 0; color: #64748b;">License Plate:</td><td style="padding: 6px 0; color: #0f172a; text-align: right;">${escapeHtml(fullOrder.licensePlate)}</td></tr>`
               : ''
           }
           <tr>
             <td style="padding: 6px 0; color: #64748b;">Date In:</td>
-            <td style="padding: 6px 0; color: #0f172a; text-align: right;">${fullOrder.dateIn}</td>
+            <td style="padding: 6px 0; color: #0f172a; text-align: right;">${escapeHtml(fullOrder.dateIn)}</td>
           </tr>
           <tr style="border-top: 1px solid #cbd5e1;">
             <td style="padding: 12px 0 4px; font-weight: 700; font-size: 15px; color: #0f172a;">Total Amount:</td>
@@ -1676,7 +1672,7 @@ async function handleSendGmailOrderEmail(options: {
         An official landscape PDF copy (<strong>${fullOrder.orderNumber}.pdf</strong>) is attached with complete line items, warranty terms, and shop policies.
       </p>
       <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; font-size: 12px; color: #94a3b8; text-align: center;">
-        ${shopName} · Official Invoice Delivery via Gmail
+        ${escapeHtml(shopName)} · Official Invoice Delivery via Gmail
       </div>
     </div>
   `;
@@ -2059,6 +2055,13 @@ app
     ipcMain.handle('shell:open-path', async (_event, targetPath: string) => {
       if (typeof targetPath === 'string' && targetPath.trim()) {
         await shell.openPath(targetPath);
+        return true;
+      }
+      return false;
+    });
+    ipcMain.handle('shell:open-external', async (_event, targetUrl: string) => {
+      if (typeof targetUrl === 'string' && /^https?:\/\//i.test(targetUrl)) {
+        await shell.openExternal(targetUrl);
         return true;
       }
       return false;
