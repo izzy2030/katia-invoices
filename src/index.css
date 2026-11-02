@@ -2240,7 +2240,7 @@ tbody tr:hover {
 
 .cost-summary {
   align-items: center;
-  background: var(--surface-subtle);
+  background: transparent;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   color: var(--muted);
