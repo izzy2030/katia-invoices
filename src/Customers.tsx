@@ -6,6 +6,7 @@ import {
 } from './customerHistory';
 import { orderStatusLabels } from './workOrder';
 import { decodeVin } from './vinDecoder';
+import { Zap, Loader2, Check, AlertCircle } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 
 type Props = {
@@ -86,6 +87,77 @@ function CustomersView({
   const [addingVehicle, setAddingVehicle] = useState(false);
   const [savingVehicle, setSavingVehicle] = useState(false);
   const [vehicleError, setVehicleError] = useState('');
+  const [modalVin, setModalVin] = useState('');
+  const [modalYear, setModalYear] = useState('');
+  const [modalMake, setModalMake] = useState('');
+  const [modalModel, setModalModel] = useState('');
+  const [modalPlate, setModalPlate] = useState('');
+  const [modalMileage, setModalMileage] = useState('');
+  const [modalVinDecoding, setModalVinDecoding] = useState(false);
+  const [modalVinFeedback, setModalVinFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
+
+  const resetModalVehicle = () => {
+    setModalVin('');
+    setModalYear('');
+    setModalMake('');
+    setModalModel('');
+    setModalPlate('');
+    setModalMileage('');
+    setModalVinFeedback(null);
+    setVehicleError('');
+  };
+
+  const handleModalDecodeVin = async (rawVin?: string) => {
+    const targetVin = (rawVin ?? modalVin)
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
+
+    if (!targetVin || targetVin.length !== 17) {
+      setModalVinFeedback({
+        type: 'error',
+        message: `VIN must be 17 characters (${targetVin.length} entered)`,
+      });
+      return;
+    }
+
+    setModalVinDecoding(true);
+    setModalVinFeedback(null);
+
+    try {
+      const decoded = await decodeVin(targetVin);
+      if (decoded.year) setModalYear(decoded.year);
+      if (decoded.make) setModalMake(decoded.make);
+      if (decoded.model) setModalModel(decoded.model);
+      setModalVinFeedback({
+        type: 'success',
+        message:
+          `${decoded.year} ${decoded.make} ${decoded.model}`.trim() ||
+          'Vehicle specs decoded',
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Lookup failed';
+      setModalVinFeedback({
+        type: 'error',
+        message: msg.length > 40 ? 'Vehicle not found in NHTSA' : msg,
+      });
+    } finally {
+      setModalVinDecoding(false);
+    }
+  };
+
+  const handleModalVinChange = (val: string) => {
+    const upper = val.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    setModalVin(upper);
+    setModalVinFeedback(null);
+    if (upper.length === 17) {
+      void handleModalDecodeVin(upper);
+    }
+  };
+
   const selected =
     matches.find((customer) => customer.key === selectedKey) ?? matches[0];
   const historyVehicle =
@@ -99,17 +171,16 @@ function CustomersView({
   async function handleAddVehicle(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selected) return;
-    const data = new FormData(event.currentTarget);
     const submitter = (event.nativeEvent as SubmitEvent)
       .submitter as HTMLButtonElement | null;
     const action = submitter?.value || 'save';
 
-    const year = String(data.get('year') ?? '').trim();
-    const make = String(data.get('make') ?? '').trim();
-    const model = String(data.get('model') ?? '').trim();
-    const licensePlate = String(data.get('licensePlate') ?? '').trim();
-    const vin = String(data.get('vin') ?? '').trim();
-    const mileage = String(data.get('mileage') ?? '').trim();
+    const year = modalYear.trim();
+    const make = modalMake.trim();
+    const model = modalModel.trim();
+    const licensePlate = modalPlate.trim();
+    const vin = modalVin.trim();
+    const mileage = modalMileage.trim();
 
     if (!year || !make || !model) {
       setVehicleError('Please provide Year, Make, and Model.');
@@ -135,6 +206,7 @@ function CustomersView({
 
     if (saved) {
       setAddingVehicle(false);
+      resetModalVehicle();
       if (action === 'saveAndOrder') {
         const vKey = vin
           ? `vin:${vin.replace(/[\s-]+/g, '').toUpperCase()}`
@@ -371,7 +443,7 @@ function CustomersView({
                 type="button"
                 className="add-vehicle-btn"
                 onClick={() => {
-                  setVehicleError('');
+                  resetModalVehicle();
                   setAddingVehicle(true);
                 }}
               >
@@ -385,7 +457,7 @@ function CustomersView({
                   type="button"
                   className="secondary-button"
                   onClick={() => {
-                    setVehicleError('');
+                    resetModalVehicle();
                     setAddingVehicle(true);
                   }}
                 >
@@ -542,87 +614,136 @@ function CustomersView({
             </div>
 
             <form onSubmit={handleAddVehicle}>
-              <div className="form-grid add-vehicle-grid">
-                <label className="field">
-                  <span>Year *</span>
-                  <input
-                    name="year"
-                    type="text"
-                    required
-                    placeholder="e.g. 2024"
-                    defaultValue={new Date().getFullYear()}
-                    autoFocus
-                  />
-                </label>
-                <label className="field">
-                  <span>Make *</span>
-                  <input
-                    name="make"
-                    type="text"
-                    required
-                    placeholder="e.g. Toyota"
-                  />
-                </label>
-                <label className="field">
-                  <span>Model *</span>
-                  <input
-                    name="model"
-                    type="text"
-                    required
-                    placeholder="e.g. Camry"
-                  />
-                </label>
-                <label className="field">
-                  <span>License plate</span>
-                  <input
-                    name="licensePlate"
-                    type="text"
-                    placeholder="e.g. ABC 1234"
-                  />
-                </label>
-                <label className="field full-width">
-                  <span>VIN / Serial number</span>
-                  <input
-                    name="vin"
-                    type="text"
-                    placeholder="17-character VIN (auto-decodes)"
-                    maxLength={17}
-                    onChange={(e) => {
-                      const val = e.target.value
-                        .toUpperCase()
-                        .replace(/[^A-Z0-9]/g, '');
-                      e.target.value = val;
-                      if (val.length === 17) {
-                        const formEl = e.target.form;
-                        if (formEl) {
-                          void decodeVin(val)
-                            .then((decoded) => {
-                              const yearEl = formEl.elements.namedItem(
-                                'year',
-                              ) as HTMLInputElement | null;
-                              const makeEl = formEl.elements.namedItem(
-                                'make',
-                              ) as HTMLInputElement | null;
-                              const modelEl = formEl.elements.namedItem(
-                                'model',
-                              ) as HTMLInputElement | null;
-                              if (yearEl && decoded.year)
-                                yearEl.value = decoded.year;
-                              if (makeEl && decoded.make)
-                                makeEl.value = decoded.make;
-                              if (modelEl && decoded.model)
-                                modelEl.value = decoded.model;
-                            })
-                            .catch(() => undefined);
-                        }
+              <div className="add-vehicle-form-body">
+                {/* 1. VIN HERO ROW GOES FIRST */}
+                <div className="vin-hero-row">
+                  <div className="vin-hero-header">
+                    <label htmlFor="modal-vin" className="vin-hero-label">
+                      <span className="vin-hero-title">
+                        VIN / Serial number
+                      </span>
+                      <span className="vin-hero-subtitle">
+                        Auto-fills Year, Make & Model
+                      </span>
+                    </label>
+                    {modalVinFeedback && (
+                      <div
+                        className={`vin-pill-feedback ${modalVinFeedback.type}`}
+                      >
+                        {modalVinFeedback.type === 'success' ? (
+                          <Check size={12} />
+                        ) : (
+                          <AlertCircle size={12} />
+                        )}
+                        <span>{modalVinFeedback.message}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="vin-input-wrapper">
+                    <input
+                      id="modal-vin"
+                      name="vin"
+                      type="text"
+                      value={modalVin}
+                      onChange={(e) => handleModalVinChange(e.target.value)}
+                      placeholder="Enter 17-character VIN (auto-decodes make & model)"
+                      maxLength={17}
+                      autoComplete="off"
+                      spellCheck={false}
+                      className="vin-hero-input"
+                      autoFocus
+                    />
+                    {modalVin && (
+                      <span className="vin-counter">
+                        {modalVin.replace(/[^A-Z0-9]/gi, '').length}/17
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      className="vin-hero-btn"
+                      onClick={() => void handleModalDecodeVin(modalVin)}
+                      disabled={
+                        modalVinDecoding ||
+                        !modalVin ||
+                        modalVin.replace(/[^A-Z0-9]/gi, '').length !== 17
                       }
-                    }}
-                  />
-                </label>
-                <label className="field full-width">
-                  <span>Mileage</span>
-                  <input name="mileage" type="text" placeholder="e.g. 45,000" />
-                </label>
+                      title="Auto-fill Year, Make & Model using official NHTSA vehicle database"
+                    >
+                      {modalVinDecoding ? (
+                        <>
+                          <Loader2 size={12} className="spin" />
+                          <span>Decoding…</span>
+                        </>
+                      ) : (
+                        <>
+                          <Zap size={12} />
+                          <span>Decode VIN</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. AUTO-POPULATED SPECS */}
+                <div className="form-grid add-vehicle-specs-grid">
+                  <label className="field">
+                    <span>Year *</span>
+                    <input
+                      name="year"
+                      type="text"
+                      required
+                      placeholder="e.g. 2021"
+                      value={modalYear}
+                      onChange={(e) => setModalYear(e.target.value)}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Make *</span>
+                    <input
+                      name="make"
+                      type="text"
+                      required
+                      placeholder="e.g. Toyota"
+                      value={modalMake}
+                      onChange={(e) => setModalMake(e.target.value)}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Model *</span>
+                    <input
+                      name="model"
+                      type="text"
+                      required
+                      placeholder="e.g. Camry"
+                      value={modalModel}
+                      onChange={(e) => setModalModel(e.target.value)}
+                    />
+                  </label>
+                </div>
+
+                {/* 3. LICENSE PLATE & MILEAGE */}
+                <div className="form-grid add-vehicle-secondary-grid">
+                  <label className="field">
+                    <span>License plate</span>
+                    <input
+                      name="licensePlate"
+                      type="text"
+                      placeholder="e.g. ABC 1234"
+                      value={modalPlate}
+                      onChange={(e) => setModalPlate(e.target.value)}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Mileage</span>
+                    <input
+                      name="mileage"
+                      type="text"
+                      placeholder="e.g. 45,000"
+                      value={modalMileage}
+                      onChange={(e) => setModalMileage(e.target.value)}
+                    />
+                  </label>
+                </div>
               </div>
 
               {vehicleError && (

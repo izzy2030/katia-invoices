@@ -1854,93 +1854,119 @@ tbody tr:hover {
   }
 }
 
-/* VIN Decoder & Field Styles */
-.vin-input-group {
+/* VIN Hero Field & Vehicle Grid Styles */
+.vin-hero-row {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-width: 0;
-  position: relative;
+  margin-bottom: 14px;
 }
 
-.vin-label-row {
+.vin-hero-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-height: 22px;
 }
 
-.vin-label-row .vin-label {
-  color: var(--ink-secondary);
-  font-size: 12.5px;
-  font-weight: 600;
+.vin-hero-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   cursor: default;
 }
 
-.order-workspace .vin-label-row .vin-label {
+.vin-hero-title {
+  color: var(--ink-secondary);
   font-size: 13px;
-}
-
-.vin-decode-action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 7px;
-  background: var(--accent-soft, rgba(37, 99, 235, 0.1));
-  border: 1px solid var(--accent-border, rgba(37, 99, 235, 0.3));
-  border-radius: var(--radius-sm, 4px);
-  color: var(--accent, #3b82f6);
-  font-size: 11px;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  line-height: 1.2;
 }
 
-.vin-decode-action-btn:hover:not(:disabled) {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #ffffff;
+.vin-hero-subtitle {
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 500;
 }
 
-.vin-decode-action-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  filter: grayscale(0.5);
-}
-
-.vin-input-container {
+.vin-input-wrapper {
   position: relative;
+  display: flex;
+  align-items: center;
   width: 100%;
 }
 
-.vin-input-container input {
+.vin-hero-input {
   background: var(--paper);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-xs);
   color: var(--ink);
-  font-size: 13.5px;
   font-family: var(--font-mono, monospace);
-  letter-spacing: 0.04em;
-  outline: none;
-  padding: 8px 11px;
-  height: 40px;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  height: 42px;
   width: 100%;
+  padding: 8px 148px 8px 12px;
+  outline: none;
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
 }
 
-.vin-input-container input::placeholder {
-  color: var(--muted);
-  font-family: inherit;
-  letter-spacing: normal;
-}
-
-.vin-input-container input:focus {
+.vin-hero-input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.vin-hero-input::placeholder {
+  font-family: inherit;
+  letter-spacing: normal;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: normal;
+}
+
+.vin-counter {
+  position: absolute;
+  right: 112px;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.vin-hero-btn {
+  position: absolute;
+  right: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 11px;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm, 5px);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.vin-hero-btn:hover:not(:disabled) {
+  background: var(--accent-strong, #1d4ed8);
+}
+
+.vin-hero-btn:disabled {
+  background: var(--surface-subtle);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .vin-pill-feedback {
@@ -1949,8 +1975,7 @@ tbody tr:hover {
   gap: 5px;
   font-size: 11.5px;
   font-weight: 600;
-  margin-top: 2px;
-  padding: 3px 8px;
+  padding: 2px 8px;
   border-radius: var(--radius-sm, 4px);
   animation: fadeIn 0.18s ease;
 }
@@ -1977,6 +2002,21 @@ tbody tr:hover {
   background: rgba(239, 68, 68, 0.2);
   color: #f87171;
   border-color: rgba(248, 113, 113, 0.35);
+}
+
+.vehicle-specs-grid,
+.add-vehicle-specs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 12px;
+}
+
+.vehicle-secondary-grid,
+.add-vehicle-secondary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 12px;
+  margin-top: 14px;
 }
 
 .field {
@@ -6771,6 +6811,10 @@ button:focus-visible {
   }
   .order-workspace .form-grid,
   .vehicle-grid,
+  .vehicle-specs-grid,
+  .vehicle-secondary-grid,
+  .add-vehicle-specs-grid,
+  .add-vehicle-secondary-grid,
   .legacy-grid {
     grid-template-columns: minmax(0, 1fr);
   }

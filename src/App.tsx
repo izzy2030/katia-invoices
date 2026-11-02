@@ -338,7 +338,7 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [notice, setNoticeText] = useState('');
   const [noticeIsError, setNoticeIsError] = useState(false);
-  const [appVersion, setAppVersion] = useState('1.1.4');
+  const [appVersion, setAppVersion] = useState('1.1.5');
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
   const [emailSending, setEmailSending] = useState(false);
   const [emailModalError, setEmailModalError] = useState('');
@@ -1750,7 +1750,85 @@ function App() {
                         )}
                       </button>
                     </div>
-                    <div className="form-grid vehicle-grid">
+                    {/* 1. VIN HERO ROW GOES FIRST */}
+                    <div className="vin-hero-row">
+                      <div className="vin-hero-header">
+                        <label htmlFor="field-vin" className="vin-hero-label">
+                          <span className="vin-hero-title">
+                            VIN / Serial number
+                          </span>
+                          <span className="vin-hero-subtitle">
+                            Auto-fills Year, Make & Model
+                          </span>
+                        </label>
+                        {vinFeedback && (
+                          <div
+                            className={`vin-pill-feedback ${vinFeedback.type}`}
+                          >
+                            {vinFeedback.type === 'success' ? (
+                              <Check size={12} />
+                            ) : (
+                              <AlertCircle size={12} />
+                            )}
+                            <span>{vinFeedback.message}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="vin-input-wrapper">
+                        <input
+                          id="field-vin"
+                          name="vin"
+                          type="text"
+                          value={form.vin}
+                          onChange={(e) => {
+                            const upper = e.target.value
+                              .toUpperCase()
+                              .replace(/[^A-Z0-9]/g, '');
+                            updateField('vin', upper);
+                            setVinFeedback(null);
+                            if (upper.length === 17) {
+                              void handleDecodeVin(upper);
+                            }
+                          }}
+                          placeholder="Enter 17-character VIN (auto-decodes make & model)"
+                          maxLength={17}
+                          autoComplete="off"
+                          spellCheck={false}
+                          className="vin-hero-input"
+                        />
+                        {form.vin && (
+                          <span className="vin-counter">
+                            {form.vin.replace(/[^A-Z0-9]/gi, '').length}/17
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          className="vin-hero-btn"
+                          onClick={() => void handleDecodeVin(form.vin)}
+                          disabled={
+                            vinDecoding ||
+                            !form.vin ||
+                            form.vin.replace(/[^A-Z0-9]/gi, '').length !== 17
+                          }
+                          title="Auto-fill Year, Make & Model using official NHTSA vehicle database"
+                        >
+                          {vinDecoding ? (
+                            <>
+                              <Loader2 size={12} className="spin" />
+                              <span>Decoding…</span>
+                            </>
+                          ) : (
+                            <>
+                              <Zap size={12} />
+                              <span>Decode VIN</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 2. AUTO-POPULATED SPECS */}
+                    <div className="form-grid vehicle-specs-grid">
                       <Field
                         label="Year"
                         name="vehicleYear"
@@ -1772,6 +1850,10 @@ function App() {
                         onChange={updateField}
                         placeholder="Camry"
                       />
+                    </div>
+
+                    {/* 3. LICENSE PLATE & MILEAGE */}
+                    <div className="form-grid vehicle-secondary-grid">
                       <Field
                         label="License plate"
                         name="licensePlate"
@@ -1779,70 +1861,6 @@ function App() {
                         onChange={updateField}
                         placeholder="ABC 1234"
                       />
-                      <div className="vin-input-group">
-                        <div className="vin-label-row">
-                          <label htmlFor="field-vin" className="vin-label">
-                            Serial number / VIN
-                          </label>
-                          <button
-                            type="button"
-                            className="vin-decode-action-btn"
-                            onClick={() => void handleDecodeVin(form.vin)}
-                            disabled={
-                              vinDecoding ||
-                              !form.vin ||
-                              form.vin.replace(/[^A-Z0-9]/gi, '').length !== 17
-                            }
-                            title="Auto-fill Year, Make & Model using official NHTSA vehicle database"
-                          >
-                            {vinDecoding ? (
-                              <>
-                                <Loader2 size={11} className="spin" />
-                                <span>Decoding…</span>
-                              </>
-                            ) : (
-                              <>
-                                <Zap size={11} />
-                                <span>Decode VIN</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                        <div className="vin-input-container">
-                          <input
-                            id="field-vin"
-                            name="vin"
-                            type="text"
-                            value={form.vin}
-                            onChange={(e) => {
-                              const upper = e.target.value
-                                .toUpperCase()
-                                .replace(/[^A-Z0-9]/g, '');
-                              updateField('vin', upper);
-                              setVinFeedback(null);
-                              if (upper.length === 17) {
-                                void handleDecodeVin(upper);
-                              }
-                            }}
-                            placeholder="17-character vehicle ID"
-                            maxLength={17}
-                            autoComplete="off"
-                            spellCheck={false}
-                          />
-                        </div>
-                        {vinFeedback && (
-                          <div
-                            className={`vin-pill-feedback ${vinFeedback.type}`}
-                          >
-                            {vinFeedback.type === 'success' ? (
-                              <Check size={12} />
-                            ) : (
-                              <AlertCircle size={12} />
-                            )}
-                            <span>{vinFeedback.message}</span>
-                          </div>
-                        )}
-                      </div>
                       <Field
                         label="Mileage"
                         name="mileage"
