@@ -383,6 +383,15 @@ function modernReceiptHtml(
     font-size: 11pt;
     font-weight: 800;
   }
+  .total-card-blank {
+    background: #ffffff !important;
+    border: 1.5pt solid #0f172a !important;
+    border-radius: 8pt;
+    color: #0f172a !important;
+  }
+  .total-card-blank label {
+    color: #475569 !important;
+  }
   .total-card-blank .total-blank-line {
     display: flex;
     align-items: flex-end;
@@ -392,12 +401,12 @@ function modernReceiptHtml(
   .total-card-blank .total-dollar {
     font-size: 20pt;
     font-weight: 800;
-    color: #94a3b8;
+    color: #0f172a;
     line-height: 1;
   }
   .total-card-blank .total-write-rule {
     flex: 1;
-    border-bottom: 1.5pt solid #475569;
+    border-bottom: 1.5pt solid #0f172a;
     height: 18pt;
     margin-bottom: 2pt;
   }
@@ -566,7 +575,7 @@ function modernReceiptHtml(
           <div class="blank-unit"><label>Make</label><div class="write-line"></div></div>
           <div class="blank-unit"><label>Model</label><div class="write-line"></div></div>
         </div>
-        <div class="blank-vehicle-facts mono">
+        <div class="blank-vehicle-facts">
           <div class="blank-fact-item"><label>Serial no. / VIN</label><div class="write-line"></div></div>
           <div class="blank-fact-item"><label>License plate</label><div class="write-line"></div></div>
           <div class="blank-fact-item"><label>Mileage</label><div class="write-line"></div></div>
@@ -649,10 +658,9 @@ function modernReceiptHtml(
       </thead>
       <tbody>
         <tr class="group blank-group-row">
-          <td colspan="5">Parts <small>All parts new unless otherwise specified</small></td>
-          <td class="num blank-amount-cell"><span class="dollar-sign">$</span></td>
+          <td colspan="6">Parts <small>All parts new unless otherwise specified</small></td>
         </tr>
-        ${Array.from({ length: 6 })
+        ${Array.from({ length: 5 })
           .map(
             () =>
               `<tr class="line blank-row">
@@ -666,10 +674,9 @@ function modernReceiptHtml(
           )
           .join('')}
         <tr class="group blank-group-row">
-          <td colspan="5">Labor &amp; services <small>Body repair, mechanical, paint, frame, diagnostic</small></td>
-          <td class="num blank-amount-cell"><span class="dollar-sign">$</span></td>
+          <td colspan="6">Labor &amp; services <small>Body repair, mechanical, paint, frame, diagnostic</small></td>
         </tr>
-        ${Array.from({ length: 6 })
+        ${Array.from({ length: 5 })
           .map(
             () =>
               `<tr class="line blank-row">
