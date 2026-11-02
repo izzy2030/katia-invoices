@@ -290,7 +290,6 @@ function App() {
   const [switchVehicleOpen, setSwitchVehicleOpen] = useState(false);
   const [postSaveEmailPrompt, setPostSaveEmailPrompt] = useState<{
     order: WorkOrder;
-    provider: 'gmail' | 'resend' | null;
     senderDescription: string;
   } | null>(null);
   const [postSaveRecipient, setPostSaveRecipient] = useState('');
@@ -879,21 +878,16 @@ function App() {
 
   async function checkEmailConfigured(): Promise<{
     configured: boolean;
-    provider: 'gmail' | 'resend' | null;
     senderDescription: string;
   }> {
     try {
       const route = resolveEmailRoute(await window.repairDesk.getGmailStatus());
       if (route.kind === 'gmail') {
-        return {
-          configured: true,
-          provider: 'gmail',
-          senderDescription: route.senderDescription,
-        };
+        return { configured: true, senderDescription: route.senderDescription };
       }
-      return { configured: false, provider: null, senderDescription: '' };
+      return { configured: false, senderDescription: '' };
     } catch {
-      return { configured: false, provider: null, senderDescription: '' };
+      return { configured: false, senderDescription: '' };
     }
   }
 
@@ -927,11 +921,10 @@ function App() {
           personalNote: `Thank you for choosing Katia Auto Sales & Repairs. Attached is your official repair order and invoice (${order.orderNumber}.pdf).`,
         });
       } else {
-        await window.repairDesk.sendOrderEmail(
-          order,
-          recipient,
-          `Thank you for choosing Katia Auto Sales & Repairs. Attached is your official repair order and invoice (${order.orderNumber}.pdf).`,
+        setPostSaveEmailError(
+          'Gmail is not connected. Connect it in Settings to email invoices.',
         );
+        return;
       }
       setNotice(`✓ ${order.orderNumber} sent via email to ${recipient}!`);
       setPostSaveEmailPrompt(null);
@@ -982,7 +975,7 @@ function App() {
         console.warn('Direct print error:', printErr);
       });
 
-      // Check if email delivery is configured (Resend or Gmail)
+      // Check if Gmail delivery is configured
       const emailConfig = await checkEmailConfigured();
       if (emailConfig.configured) {
         const contact = customerContacts.find(
@@ -993,7 +986,6 @@ function App() {
         setPostSaveEmailError('');
         setPostSaveEmailPrompt({
           order: saved,
-          provider: emailConfig.provider,
           senderDescription: emailConfig.senderDescription,
         });
       } else {

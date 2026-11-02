@@ -128,17 +128,6 @@ export type TaxSettings = {
   receiptStyle?: ReceiptStyle;
 };
 
-export type EmailProvider = 'resend' | 'gmail';
-
-export type EmailSettings = {
-  provider: EmailProvider;
-  senderName: string;
-  resendApiKey: string;
-  resendFromEmail: string;
-  gmailUser: string;
-  gmailAppPassword: string;
-};
-
 export type EmailSendResult = {
   success: boolean;
   message: string;

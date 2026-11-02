@@ -5,7 +5,6 @@ declare module '*.css';
 
 type ChargeLine = import('./workOrder').ChargeLine;
 type TaxSettings = import('./workOrder').TaxSettings;
-type EmailSettings = import('./workOrder').EmailSettings;
 type EmailSendResult = import('./workOrder').EmailSendResult;
 type WorkOrderInput = import('./workOrder').WorkOrderInput;
 type WorkOrder = import('./workOrder').WorkOrder;
@@ -72,17 +71,6 @@ interface Window {
     ) => Promise<import('./workOrder').DashboardPreferences>;
     getSettings: () => Promise<TaxSettings>;
     saveSettings: (settings: TaxSettings) => Promise<TaxSettings>;
-    getEmailSettings: () => Promise<EmailSettings>;
-    saveEmailSettings: (settings: EmailSettings) => Promise<EmailSettings>;
-    sendTestEmail: (
-      recipientEmail: string,
-      settings?: EmailSettings,
-    ) => Promise<EmailSendResult>;
-    sendOrderEmail: (
-      order: WorkOrder,
-      recipientEmail: string,
-      customMessage?: string,
-    ) => Promise<EmailSendResult>;
     getGmailStatus: () => Promise<{
       connected: boolean;
       email?: string;

@@ -3,7 +3,6 @@ import type { CustomerContact } from './customerHistory';
 import {
   type CatalogPreset,
   type DashboardPreferences,
-  type EmailSettings,
   type TaxSettings,
   type WorkOrder,
   type WorkOrderInput,
@@ -54,22 +53,6 @@ contextBridge.exposeInMainWorld('repairDesk', {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (settings: TaxSettings) =>
     ipcRenderer.invoke('settings:save', settings),
-  getEmailSettings: () => ipcRenderer.invoke('email-settings:get'),
-  saveEmailSettings: (settings: EmailSettings) =>
-    ipcRenderer.invoke('email-settings:save', settings),
-  sendTestEmail: (recipientEmail: string, settings?: EmailSettings) =>
-    ipcRenderer.invoke('email:send-test', recipientEmail, settings),
-  sendOrderEmail: (
-    order: WorkOrder,
-    recipientEmail: string,
-    customMessage?: string,
-  ) =>
-    ipcRenderer.invoke(
-      'email:send-order-pdf',
-      order,
-      recipientEmail,
-      customMessage,
-    ),
   getGmailStatus: () => ipcRenderer.invoke('gmail:status'),
   connectGmail: (credentials?: { clientId: string; clientSecret: string }) =>
     ipcRenderer.invoke('gmail:connect', credentials),
