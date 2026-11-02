@@ -8,7 +8,16 @@ import KatiaLogo from './KatiaLogo';
 import LegacyFields from './LegacyFields';
 import SettingsView, { type SettingsTab } from './SettingsView';
 import WindowTitleBar from './WindowTitleBar';
-import { Printer, Eye, Settings } from 'lucide-react';
+import {
+  Printer,
+  Eye,
+  Settings,
+  Zap,
+  Loader2,
+  Check,
+  AlertCircle,
+} from 'lucide-react';
+import { decodeVin } from './vinDecoder';
 import {
   customerProfiles,
   orderCustomerKey,
@@ -329,13 +338,18 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [notice, setNoticeText] = useState('');
   const [noticeIsError, setNoticeIsError] = useState(false);
-  const [appVersion, setAppVersion] = useState('1.1.3');
+  const [appVersion, setAppVersion] = useState('1.1.4');
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
   const [emailSending, setEmailSending] = useState(false);
   const [emailModalError, setEmailModalError] = useState('');
   const [showAddress, setShowAddress] = useState(false);
   const focusStreetOnOpen = useRef(false);
   const [switchVehicleOpen, setSwitchVehicleOpen] = useState(false);
+  const [vinDecoding, setVinDecoding] = useState(false);
+  const [vinFeedback, setVinFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   function setNotice(text: string, options?: { error?: boolean }) {
     setNoticeText(text);
@@ -562,6 +576,61 @@ function App() {
   const total = totals.total;
   const updateField = (name: keyof WorkOrderInput, value: string) => {
     setForm((current) => ({ ...current, [name]: value }));
+  };
+
+  useEffect(() => {
+    if (!vinFeedback) return;
+    const timer = window.setTimeout(() => {
+      setVinFeedback(null);
+    }, 5000);
+    return () => window.clearTimeout(timer);
+  }, [vinFeedback]);
+
+  const handleDecodeVin = async (rawVin?: string) => {
+    const targetVin = (rawVin ?? form.vin)
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
+
+    if (!targetVin) {
+      setVinFeedback({ type: 'error', message: 'Enter a 17-character VIN' });
+      return;
+    }
+    if (targetVin.length !== 17) {
+      setVinFeedback({
+        type: 'error',
+        message: `VIN must be 17 characters (${targetVin.length} entered)`,
+      });
+      return;
+    }
+
+    setVinDecoding(true);
+    setVinFeedback(null);
+
+    try {
+      const decoded = await decodeVin(targetVin);
+      setForm((current) => ({
+        ...current,
+        vin: targetVin,
+        vehicleYear: decoded.year || current.vehicleYear,
+        vehicleMake: decoded.make || current.vehicleMake,
+        vehicleModel: decoded.model || current.vehicleModel,
+      }));
+      setVinFeedback({
+        type: 'success',
+        message:
+          `${decoded.year} ${decoded.make} ${decoded.model}`.trim() ||
+          'Vehicle specs decoded',
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Lookup failed';
+      setVinFeedback({
+        type: 'error',
+        message: msg.length > 45 ? 'Vehicle not found in NHTSA' : msg,
+      });
+    } finally {
+      setVinDecoding(false);
+    }
   };
 
   const updateLegacyField = (key: keyof LegacyDetails, value: string) => {
@@ -1710,13 +1779,70 @@ function App() {
                         onChange={updateField}
                         placeholder="ABC 1234"
                       />
-                      <Field
-                        label="Serial number / VIN"
-                        name="vin"
-                        value={form.vin}
-                        onChange={updateField}
-                        placeholder="17-character vehicle ID"
-                      />
+                      <div className="vin-input-group">
+                        <div className="vin-label-row">
+                          <label htmlFor="field-vin" className="vin-label">
+                            Serial number / VIN
+                          </label>
+                          <button
+                            type="button"
+                            className="vin-decode-action-btn"
+                            onClick={() => void handleDecodeVin(form.vin)}
+                            disabled={
+                              vinDecoding ||
+                              !form.vin ||
+                              form.vin.replace(/[^A-Z0-9]/gi, '').length !== 17
+                            }
+                            title="Auto-fill Year, Make & Model using official NHTSA vehicle database"
+                          >
+                            {vinDecoding ? (
+                              <>
+                                <Loader2 size={11} className="spin" />
+                                <span>Decoding…</span>
+                              </>
+                            ) : (
+                              <>
+                                <Zap size={11} />
+                                <span>Decode VIN</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <div className="vin-input-container">
+                          <input
+                            id="field-vin"
+                            name="vin"
+                            type="text"
+                            value={form.vin}
+                            onChange={(e) => {
+                              const upper = e.target.value
+                                .toUpperCase()
+                                .replace(/[^A-Z0-9]/g, '');
+                              updateField('vin', upper);
+                              setVinFeedback(null);
+                              if (upper.length === 17) {
+                                void handleDecodeVin(upper);
+                              }
+                            }}
+                            placeholder="17-character vehicle ID"
+                            maxLength={17}
+                            autoComplete="off"
+                            spellCheck={false}
+                          />
+                        </div>
+                        {vinFeedback && (
+                          <div
+                            className={`vin-pill-feedback ${vinFeedback.type}`}
+                          >
+                            {vinFeedback.type === 'success' ? (
+                              <Check size={12} />
+                            ) : (
+                              <AlertCircle size={12} />
+                            )}
+                            <span>{vinFeedback.message}</span>
+                          </div>
+                        )}
+                      </div>
                       <Field
                         label="Mileage"
                         name="mileage"

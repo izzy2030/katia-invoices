@@ -98,7 +98,7 @@ export default function SettingsView({
   onImportBackup,
   onExportCsv,
   initialTab = 'shop',
-  appVersion = '1.1.3',
+  appVersion = '1.1.4',
 }: SettingsViewProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
 

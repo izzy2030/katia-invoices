@@ -5,6 +5,7 @@ import {
   type CustomerVehicle,
 } from './customerHistory';
 import { orderStatusLabels } from './workOrder';
+import { decodeVin } from './vinDecoder';
 import { useState, type FormEvent } from 'react';
 
 type Props = {
@@ -584,8 +585,38 @@ function CustomersView({
                   <input
                     name="vin"
                     type="text"
-                    placeholder="17-character VIN"
+                    placeholder="17-character VIN (auto-decodes)"
                     maxLength={17}
+                    onChange={(e) => {
+                      const val = e.target.value
+                        .toUpperCase()
+                        .replace(/[^A-Z0-9]/g, '');
+                      e.target.value = val;
+                      if (val.length === 17) {
+                        const formEl = e.target.form;
+                        if (formEl) {
+                          void decodeVin(val)
+                            .then((decoded) => {
+                              const yearEl = formEl.elements.namedItem(
+                                'year',
+                              ) as HTMLInputElement | null;
+                              const makeEl = formEl.elements.namedItem(
+                                'make',
+                              ) as HTMLInputElement | null;
+                              const modelEl = formEl.elements.namedItem(
+                                'model',
+                              ) as HTMLInputElement | null;
+                              if (yearEl && decoded.year)
+                                yearEl.value = decoded.year;
+                              if (makeEl && decoded.make)
+                                makeEl.value = decoded.make;
+                              if (modelEl && decoded.model)
+                                modelEl.value = decoded.model;
+                            })
+                            .catch(() => undefined);
+                        }
+                      }
+                    }}
                   />
                 </label>
                 <label className="field full-width">
