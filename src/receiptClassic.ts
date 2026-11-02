@@ -404,9 +404,9 @@ export function classicReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
               ${field('Home phone', details.homePhone)}
             </div>
             <div class="grid three">
-              ${field('City', details.city)}
-              ${field('State', details.state)}
-              ${field('ZIP', details.zip)}
+              ${field('City', order.address ? details.city : '')}
+              ${field('State', order.address ? details.state : '')}
+              ${field('ZIP', order.address ? details.zip : '')}
             </div>
             <div class="grid two">
               ${field('Year, make and model', [order.vehicleYear, order.vehicleMake, order.vehicleModel].filter(Boolean).join(' '))}

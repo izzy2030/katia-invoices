@@ -219,9 +219,6 @@ export default function LegacyFields({
       <details className="form-card legacy-details" open>
         <summary>Contact and shop details</summary>
         <div className="form-grid legacy-grid">
-          {field('city', 'City')}
-          {field('state', 'State')}
-          {field('zip', 'ZIP')}
           {field('phoneExtension', 'Business phone extension')}
           {field('homePhone', 'Home phone', 'tel')}
           {field('customerOrderNumber', 'Customer order number')}

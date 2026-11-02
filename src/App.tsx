@@ -24,6 +24,7 @@ import {
   ORDER_STATUSES,
   orderStatusLabels,
   supplementTotals,
+  type LegacyDetails,
   type TaxDefaults,
   type WorkOrderStatus,
 } from './workOrder';
@@ -222,6 +223,7 @@ function App() {
     email?: string;
   } | null>(null);
   const [emailModalError, setEmailModalError] = useState('');
+  const [showAddress, setShowAddress] = useState(false);
 
   useEffect(() => {
     void window.repairDesk
@@ -459,6 +461,17 @@ function App() {
     setForm((current) => ({ ...current, [name]: value }));
   };
 
+  const updateLegacyField = (key: keyof LegacyDetails, value: string) => {
+    setForm((current) => ({
+      ...current,
+      legacy: {
+        ...defaultLegacy,
+        ...current.legacy,
+        [key]: value,
+      },
+    }));
+  };
+
   function startNewOrder() {
     setNotice('');
     setSettingsOpen(false);
@@ -466,6 +479,7 @@ function App() {
     setEditingId(null);
     setDuplicateOf(null);
     setReturnCustomerKey(null);
+    setShowAddress(false);
     setForm(blankOrder(savedTaxRate, shopDefaults, shopSettings));
     setCreating(true);
   }
@@ -552,6 +566,9 @@ function App() {
     customer: CustomerProfile,
     vehicle?: CustomerVehicle,
   ) {
+    if (customer.address?.trim()) {
+      setShowAddress(true);
+    }
     setForm((current) => ({
       ...current,
       customerKey: customer.key,
@@ -576,6 +593,7 @@ function App() {
     setDuplicateOf(null);
     setReturnCustomerKey(returnCustomer);
     if (returnCustomer) setSelectedCustomerKey(returnCustomer);
+    setShowAddress(Boolean(order.address?.trim()));
     setForm({
       ...editableOrder(order),
       customerKey: orderCustomerKey(order, customerContacts),
@@ -588,6 +606,7 @@ function App() {
       ...editableOrder(order),
       customerKey: orderCustomerKey(order, customerContacts),
     };
+    setShowAddress(Boolean(copy.address?.trim()));
     const rate = copy.taxRate?.trim() ? copy.taxRate : savedTaxRate;
     setNotice('');
     setSettingsOpen(false);
@@ -1259,14 +1278,88 @@ function App() {
                         onChange={updateField}
                         placeholder="customer@example.com"
                       />
-                      <Field
-                        label="Address"
-                        name="address"
-                        value={form.address}
-                        onChange={updateField}
-                        placeholder="Street address"
-                        wide
-                      />
+                      <div className="field address-toggle-field">
+                        <span className="address-toggle-label">
+                          Customer address
+                        </span>
+                        {showAddress || Boolean(form.address?.trim()) ? (
+                          <button
+                            type="button"
+                            className="address-toggle-btn active"
+                            onClick={() => {
+                              setShowAddress(false);
+                              updateField('address', '');
+                            }}
+                            title="Remove address fields"
+                          >
+                            <span>−</span> Remove address
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="address-toggle-btn"
+                            onClick={() => setShowAddress(true)}
+                            title="Add optional customer address"
+                          >
+                            <span>+</span> Add address
+                          </button>
+                        )}
+                      </div>
+                      {(showAddress || Boolean(form.address?.trim())) && (
+                        <div className="customer-address-panel">
+                          <label className="field full-width">
+                            <span>Street address</span>
+                            <input
+                              name="address"
+                              type="text"
+                              value={form.address}
+                              onChange={(e) =>
+                                updateField('address', e.target.value)
+                              }
+                              placeholder="Street address (e.g. 123 Main St, Apt 4)"
+                            />
+                          </label>
+                          <div className="address-csz-grid">
+                            <label className="field address-city-field">
+                              <span>City</span>
+                              <input
+                                name="city"
+                                type="text"
+                                value={form.legacy?.city ?? ''}
+                                onChange={(e) =>
+                                  updateLegacyField('city', e.target.value)
+                                }
+                                placeholder="City (e.g. Aurora)"
+                              />
+                            </label>
+                            <label className="field address-state-field">
+                              <span>State</span>
+                              <input
+                                name="state"
+                                type="text"
+                                value={form.legacy?.state ?? ''}
+                                onChange={(e) =>
+                                  updateLegacyField('state', e.target.value)
+                                }
+                                placeholder="IL"
+                                maxLength={2}
+                              />
+                            </label>
+                            <label className="field address-zip-field">
+                              <span>ZIP code</span>
+                              <input
+                                name="zip"
+                                type="text"
+                                value={form.legacy?.zip ?? ''}
+                                onChange={(e) =>
+                                  updateLegacyField('zip', e.target.value)
+                                }
+                                placeholder="Zipcode (e.g. 60505)"
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </section>
 

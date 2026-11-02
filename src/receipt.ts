@@ -217,12 +217,11 @@ function modernReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
     .filter(Boolean)
     .map(e)
     .join('<i></i>');
-  const cityLine = [
-    [details.city, details.state].filter(Boolean).join(', '),
-    details.zip,
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const cityLine = order.address
+    ? [[details.city, details.state].filter(Boolean).join(', '), details.zip]
+        .filter(Boolean)
+        .join(' ')
+    : '';
   const phones = [
     [order.phone, details.phoneExtension].filter(Boolean).join(' ext. '),
     details.homePhone ? `${details.homePhone} home` : '',

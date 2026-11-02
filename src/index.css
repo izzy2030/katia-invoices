@@ -1546,6 +1546,90 @@ tbody tr:hover {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+/* Optional Address in Customer Details */
+.address-toggle-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.address-toggle-label {
+  color: var(--ink-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.address-toggle-btn {
+  align-items: center;
+  background: var(--surface-subtle);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  color: var(--accent);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 600;
+  gap: 6px;
+  height: 40px;
+  justify-content: center;
+  padding: 0 14px;
+  transition: all 0.14s ease;
+  width: 100%;
+}
+
+.address-toggle-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent-strong);
+}
+
+[data-theme='abyssal'] .address-toggle-btn:hover {
+  color: var(--accent);
+}
+
+.address-toggle-btn.active {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.address-toggle-btn.active:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+[data-theme='abyssal'] .address-toggle-btn.active:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.customer-address-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  grid-column: 1 / -1;
+  padding-top: 4px;
+}
+
+.address-csz-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(130px, 2fr) minmax(70px, 90px) minmax(
+      100px,
+      130px
+    );
+}
+
+@media (max-width: 600px) {
+  .address-csz-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .address-city-field {
+    grid-column: 1 / -1;
+  }
+}
+
 .field {
   display: flex;
   flex-direction: column;
