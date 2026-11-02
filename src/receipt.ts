@@ -441,9 +441,15 @@ function modernReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
         ${vehicleFacts ? `<div class="vehicle-facts mono">${vehicleFacts}</div>` : ''}
       </div>
       <div class="total-card">
-        <label>${hasRevised ? 'Revised total' : 'Estimate total'}</label>
+        <label>${hasRevised ? 'Revised total' : 'Total amount'}</label>
         <strong>${money(finalTotal)}</strong>
-        <small>${hasRevised ? `Original ${money(totals.total)} + additional ${money(addlTotal)}` : `Includes ${e(taxLabel.toLowerCase())}`}</small>
+        ${
+          hasRevised
+            ? `<small>Original ${money(totals.total)} + additional ${money(addlTotal)}</small>`
+            : totals.tax > 0
+              ? `<small>Includes ${money(totals.tax)} ${e(taxLabel.toLowerCase())}</small>`
+              : ''
+        }
       </div>
     </section>
 
@@ -483,8 +489,8 @@ function modernReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
         ${totalRow('Parts', totals.parts)}
         ${optionalRow('Other charges', otherChargesTotal(totals))}
         ${totalRow(taxLabel, totals.tax)}
-        ${hasRevised ? totalRow('Estimate total', totals.total, 'step') + totalRow('Additional work', addlTotal) : ''}
-        ${totalRow(hasRevised ? 'Revised total' : 'Estimate total', finalTotal, 'grand')}
+        ${hasRevised ? totalRow('Initial total', totals.total, 'step') + totalRow('Additional work', addlTotal) : ''}
+        ${totalRow(hasRevised ? 'Revised total' : 'Total amount', finalTotal, 'grand')}
       </table>
     </section>
 

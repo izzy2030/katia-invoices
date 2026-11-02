@@ -473,7 +473,7 @@ export function classicReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
                 <tr><td>EPA / waste disposal</td><td class="amount">${money(totals.disposal)}</td></tr>
                 <tr><td>Other</td><td class="amount">${money(totals.other)}</td></tr>
                 <tr><td>${e(taxLabel)}</td><td class="amount">${money(totals.tax)}</td></tr>
-                <tr class="grand-row"><td>ESTIMATE TOTAL</td><td class="amount">${money(totals.total)}</td></tr>
+                <tr class="grand-row"><td>TOTAL AMOUNT</td><td class="amount">${money(totals.total)}</td></tr>
               </table>
             </div>
           </div>

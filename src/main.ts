@@ -1308,7 +1308,7 @@ async function sendOrderEmail(
               : ''
           }
           <tr style="border-top: 1px solid #cbd5e1;">
-            <td style="padding: 12px 0 4px; font-weight: 700; font-size: 15px; color: #0f172a;">Total Estimate:</td>
+            <td style="padding: 12px 0 4px; font-weight: 700; font-size: 15px; color: #0f172a;">Total Amount:</td>
             <td style="padding: 12px 0 4px; font-weight: 800; font-size: 18px; color: #2563eb; text-align: right;">$${totals.total.toFixed(2)}</td>
           </tr>
         </table>

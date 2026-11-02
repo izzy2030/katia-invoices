@@ -1365,7 +1365,7 @@ function App() {
               {creating && !settingsOpen && !customersOpen && (
                 <div className="order-actions">
                   <div className="order-running-total">
-                    <span>Estimated total</span>
+                    <span>Total amount</span>
                     <strong>${total.toFixed(2)}</strong>
                   </div>
                   <button
@@ -1756,7 +1756,7 @@ function App() {
                       </div>
                     </div>
                     <div className="total-preview">
-                      <span>Estimated total</span>
+                      <span>Total amount</span>
                       <strong>${total.toFixed(2)}</strong>
                     </div>
                     <div className="info-note">
@@ -2177,7 +2177,7 @@ function App() {
                   </strong>
                 </div>
                 <div className="summary-item right">
-                  <span className="summary-label">Estimate Total</span>
+                  <span className="summary-label">Total Amount</span>
                   <strong className="summary-total">
                     ${chargeTotals(postSaveEmailPrompt.order).total.toFixed(2)}
                   </strong>
@@ -2281,7 +2281,7 @@ function App() {
                   </strong>
                 </div>
                 <div className="summary-item right">
-                  <span className="summary-label">Estimate Total</span>
+                  <span className="summary-label">Total Amount</span>
                   <strong className="summary-total">
                     {emailModalOrder.total
                       ? emailModalOrder.total.toLocaleString('en-US', {
