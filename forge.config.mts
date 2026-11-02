@@ -24,7 +24,13 @@ const config: ForgeConfig = {
         'https://raw.githubusercontent.com/izzy2030/katia-invoices/master/assets/icon.ico',
     }),
     new MakerZIP({}, ['darwin']),
-    new MakerDMG({}, ['darwin']),
+    new MakerDMG(
+      {
+        icon: './assets/icon.icns',
+        name: 'Katia Body Shop',
+      },
+      ['darwin'],
+    ),
   ],
   publishers: [
     new PublisherGitHub({

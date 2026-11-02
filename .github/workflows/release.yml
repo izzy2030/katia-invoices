@@ -37,9 +37,7 @@ jobs:
         run: |
           npm run typecheck
           npm run lint
-          node src/customerHistory.test.cjs
-          node src/backupService.test.cjs
-          node src/gmailIntegration.test.cjs
+          npm test
 
       - name: Publish to GitHub Releases
         env:
