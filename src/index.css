@@ -2672,7 +2672,8 @@ button:focus-visible {
 }
 
 .order-actions,
-.dashboard-header-actions {
+.dashboard-header-actions,
+.settings-header-actions {
   align-items: center;
   display: flex;
   gap: 10px;

@@ -44,6 +44,7 @@ interface Window {
     ) => Promise<{ saved: boolean; filePath?: string } | boolean>;
     printOrder: (
       order: WorkOrder,
+      options?: { isBlank?: boolean; autoPrint?: boolean },
     ) => Promise<{ success: boolean; error?: string }>;
     printBlankOrder: () => Promise<{ success: boolean; error?: string }>;
     openPath: (targetPath: string) => Promise<boolean>;

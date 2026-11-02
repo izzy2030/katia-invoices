@@ -27,8 +27,10 @@ contextBridge.exposeInMainWorld('repairDesk', {
     ipcRenderer.invoke('work-orders:set-status', id, status),
   saveWorkOrderPdf: (order: WorkOrder) =>
     ipcRenderer.invoke('work-orders:print-pdf', order),
-  printOrder: (order: WorkOrder) =>
-    ipcRenderer.invoke('work-orders:print', order),
+  printOrder: (
+    order: WorkOrder,
+    options?: { isBlank?: boolean; autoPrint?: boolean },
+  ) => ipcRenderer.invoke('work-orders:print', order, options),
   printBlankOrder: () => ipcRenderer.invoke('work-orders:print-blank'),
   openPath: (targetPath: string) =>
     ipcRenderer.invoke('shell:open-path', targetPath),

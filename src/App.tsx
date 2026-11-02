@@ -7,7 +7,7 @@ import KatiaLogo from './KatiaLogo';
 import LegacyFields from './LegacyFields';
 import SettingsView, { type SettingsTab } from './SettingsView';
 import WindowTitleBar from './WindowTitleBar';
-import { Printer, Mail } from 'lucide-react';
+import { Printer, Mail, Eye } from 'lucide-react';
 import {
   customerProfiles,
   orderCustomerKey,
@@ -122,6 +122,36 @@ const editableOrder = (order: WorkOrder): WorkOrderInput => ({
   taxAmount: order.taxAmount ?? '',
   legacy: { ...defaultLegacy, ...order.legacy },
 });
+
+const isOrderBeingFilled = (
+  form: WorkOrderInput,
+  editing: boolean,
+): boolean => {
+  if (editing) return true;
+  if (
+    Boolean(form.customerName?.trim()) ||
+    Boolean(form.phone?.trim()) ||
+    Boolean(form.email?.trim()) ||
+    Boolean(form.address?.trim()) ||
+    Boolean(form.vehicleYear?.trim()) ||
+    Boolean(form.vehicleMake?.trim()) ||
+    Boolean(form.vehicleModel?.trim()) ||
+    Boolean(form.vin?.trim()) ||
+    Boolean(form.licensePlate?.trim()) ||
+    Boolean(form.mileage?.trim()) ||
+    Boolean(form.concerns?.trim()) ||
+    Boolean(form.datePromised?.trim())
+  ) {
+    return true;
+  }
+  return form.charges.some(
+    (c) =>
+      Boolean(c.description?.trim()) ||
+      Boolean(c.partNumber?.trim()) ||
+      Boolean(c.unitPrice?.trim()) ||
+      (c.amount !== '' && c.amount !== undefined && Number(c.amount) > 0),
+  );
+};
 
 function Field({
   label,
@@ -975,6 +1005,36 @@ function App() {
     }
   }
 
+  function getDraftPreviewOrder(): WorkOrder {
+    const existingOrder = editingId
+      ? orders.find((o) => o.id === editingId)
+      : null;
+    const nextNum = shopSettings.nextOrderNumber
+      ? String(Number(shopSettings.nextOrderNumber)).padStart(5, '0')
+      : '00001';
+    const orderNumber = existingOrder?.orderNumber || `RO-${nextNum}`;
+    const createdAt = existingOrder?.createdAt || new Date().toISOString();
+    const totals = chargeTotals(form);
+    return {
+      ...form,
+      id: existingOrder?.id || 'draft-preview',
+      orderNumber,
+      createdAt,
+      total: totals.total,
+      legacy: { ...defaultLegacy, ...form.legacy },
+    };
+  }
+
+  async function previewCurrentOrder() {
+    try {
+      const draft = getDraftPreviewOrder();
+      await window.repairDesk.printOrder(draft, { autoPrint: false });
+    } catch (err) {
+      console.warn('Could not launch order preview:', err);
+      setNotice('Could not open print preview.');
+    }
+  }
+
   function openEmailModal(order: WorkOrder) {
     setEmailModalOrder(order);
     setEmailModalError('');
@@ -1371,20 +1431,34 @@ function App() {
                         : 'Here’s what’s happening in your shop today.'}
                 </p>
               </div>
-              {creating && !settingsOpen && !customersOpen && (
-                <div className="order-actions">
-                  <div className="order-running-total">
-                    <span>Total amount</span>
-                    <strong>${total.toFixed(2)}</strong>
-                  </div>
+              {settingsOpen && (
+                <div className="settings-header-actions">
                   <button
                     type="button"
                     className="secondary-button"
                     onClick={() => void printBlankOrder()}
                     title="Print a blank repair order to fill out by hand"
                   >
-                    <Printer size={15} /> Blank form
+                    <Printer size={16} /> Print blank order
                   </button>
+                </div>
+              )}
+              {creating && !settingsOpen && !customersOpen && (
+                <div className="order-actions">
+                  <div className="order-running-total">
+                    <span>Total amount</span>
+                    <strong>${total.toFixed(2)}</strong>
+                  </div>
+                  {isOrderBeingFilled(form, Boolean(editingId)) && (
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => void previewCurrentOrder()}
+                      title="Preview how this order will look when printed"
+                    >
+                      <Eye size={15} /> Preview
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="secondary-button"

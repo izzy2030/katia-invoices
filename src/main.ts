@@ -829,9 +829,10 @@ async function printWorkOrder(
 
 async function printOrderDirect(
   order: WorkOrder,
-  options?: { isBlank?: boolean },
+  options?: { isBlank?: boolean; autoPrint?: boolean },
 ): Promise<{ success: boolean; error?: string }> {
   const isBlank = Boolean(options?.isBlank);
+  const autoPrint = options?.autoPrint !== false;
   const shopSettings = getSettings();
   let html = receiptHtml(order, shopSettings, { isBlank });
 
@@ -936,18 +937,20 @@ async function printOrderDirect(
       `data:text/html;charset=utf-8,${encodeURIComponent(html)}`,
     );
 
-    // Launch print dialog directly over the visible window
-    printWindow.webContents.print(
-      {
-        silent: false,
-        printBackground: true,
-      },
-      (success, failureReason) => {
-        if (!success && failureReason && failureReason !== 'cancelled') {
-          console.warn('Print dialog issue:', failureReason);
-        }
-      },
-    );
+    if (autoPrint) {
+      // Launch print dialog directly over the visible window
+      printWindow.webContents.print(
+        {
+          silent: false,
+          printBackground: true,
+        },
+        (success, failureReason) => {
+          if (!success && failureReason && failureReason !== 'cancelled') {
+            console.warn('Print dialog issue:', failureReason);
+          }
+        },
+      );
+    }
 
     return { success: true };
   } catch (err) {
@@ -1862,8 +1865,13 @@ app
     ipcMain.handle('work-orders:print-pdf', (_event, order: WorkOrder) =>
       printWorkOrder(order),
     );
-    ipcMain.handle('work-orders:print', (_event, order: WorkOrder) =>
-      printOrderDirect(order),
+    ipcMain.handle(
+      'work-orders:print',
+      (
+        _event,
+        order: WorkOrder,
+        options?: { isBlank?: boolean; autoPrint?: boolean },
+      ) => printOrderDirect(order, options),
     );
     ipcMain.handle('work-orders:print-blank', () => printBlankOrderDirect());
     ipcMain.handle('shell:open-path', async (_event, targetPath: string) => {
