@@ -406,7 +406,7 @@ function formatOrderSequence(seq: number): string {
   return `RO-${String(Math.max(1, Math.floor(seq))).padStart(5, '0')}`;
 }
 
-function writeSettingsToDb(
+export function writeSettingsToDb(
   database: DatabaseSync,
   settings: Partial<TaxSettings>,
 ): void {
