@@ -233,14 +233,51 @@ function modernReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
     font-weight: 200 800;
     src: url(data:font/woff2;base64,${MANROPE_WOFF2_BASE64}) format('woff2');
   }
-  @page { size: letter portrait; margin: 0.35in 0.5in; }
+  @page { size: letter portrait; margin: 0.5in 0.5in; }
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   html, body {
     margin: 0;
     padding: 0;
     font: 500 8.5pt/1.4 Manrope, "Segoe UI", Arial, sans-serif;
     color: #0f172a;
-    background: #ffffff;
+  }
+  @media screen {
+    html, body {
+      background: #e2e8f0;
+      min-height: 100vh;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 68px 24px 48px;
+    }
+    .page-sheet {
+      width: 100%;
+      max-width: 8.5in;
+      min-height: 11in;
+      background: #ffffff;
+      padding: 0.5in 0.6in;
+      border-radius: 6px;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.15), 0 1px 3px rgba(15, 23, 42, 0.08);
+      margin: 0 auto;
+    }
+  }
+  @media print {
+    html, body {
+      background: #ffffff !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .page-sheet {
+      width: 100% !important;
+      max-width: none !important;
+      min-height: auto !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+    }
   }
   label {
     display: block;
@@ -383,6 +420,7 @@ function modernReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
   .box { display: inline-flex; align-items: center; justify-content: center; width: 9pt; height: 9pt; border: 0.75pt solid #0f172a; border-radius: 2pt; font-size: 7pt; font-weight: 800; line-height: 1; overflow: hidden; }
   .deposit { margin-top: 2pt; color: #475569; }
   </style></head><body>
+    <div class="page-sheet">
     <header>
       <div class="brand-lockup">
         ${logoSvg}
@@ -476,6 +514,7 @@ function modernReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
         </div>
       </div>
     </section>
+    </div>
     </div>
   </body></html>`;
 }

@@ -838,9 +838,6 @@ async function printOrderDirect(
       @media print {
         .print-preview-bar { display: none !important; }
       }
-      @media screen {
-        body { padding-top: 50px !important; }
-      }
       .print-preview-bar {
         position: fixed;
         top: 0;

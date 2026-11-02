@@ -211,21 +211,57 @@ export function classicReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
   });
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>${e(order.orderNumber)}</title><style>
-  @page { size: letter landscape; margin: 0.28in 0.32in; }
+  @page { size: letter landscape; margin: 0.4in 0.45in; }
   * { box-sizing: border-box; }
   html, body {
     margin: 0;
     padding: 0;
-    height: 100%;
     font: 9.5px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
     color: #0f172a;
-    background: #ffffff;
   }
-  .page-sheet {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    max-height: 755px;
+  @media screen {
+    html, body {
+      background: #e2e8f0;
+      min-height: 100vh;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 68px 24px 48px;
+    }
+    .page-sheet {
+      width: 100%;
+      max-width: 11in;
+      min-height: 8.5in;
+      background: #ffffff;
+      padding: 0.4in 0.5in;
+      border-radius: 6px;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.15), 0 1px 3px rgba(15, 23, 42, 0.08);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+    }
+  }
+  @media print {
+    html, body {
+      background: #ffffff !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      height: 100%;
+    }
+    .page-sheet {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      max-height: 755px;
+      width: 100% !important;
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+    }
   }
   header {
     display: flex;
