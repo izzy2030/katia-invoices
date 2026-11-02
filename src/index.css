@@ -2671,7 +2671,8 @@ button:focus-visible {
   font-size: 13.5px;
 }
 
-.order-actions {
+.order-actions,
+.dashboard-header-actions {
   align-items: center;
   display: flex;
   gap: 10px;

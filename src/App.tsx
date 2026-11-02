@@ -966,6 +966,15 @@ function App() {
     }
   }
 
+  async function printBlankOrder() {
+    try {
+      await window.repairDesk.printBlankOrder();
+    } catch (err) {
+      console.warn('Could not launch blank order print:', err);
+      setNotice('Could not open blank order print preview.');
+    }
+  }
+
   function openEmailModal(order: WorkOrder) {
     setEmailModalOrder(order);
     setEmailModalError('');
@@ -1371,6 +1380,14 @@ function App() {
                   <button
                     type="button"
                     className="secondary-button"
+                    onClick={() => void printBlankOrder()}
+                    title="Print a blank repair order to fill out by hand"
+                  >
+                    <Printer size={15} /> Blank form
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-button"
                     disabled={busy}
                     onClick={closeOrderForm}
                   >
@@ -1388,9 +1405,19 @@ function App() {
                 </div>
               )}
               {!creating && !settingsOpen && !customersOpen && (
-                <button className="primary-button" onClick={startNewOrder}>
-                  <span>＋</span> New repair order
-                </button>
+                <div className="dashboard-header-actions">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => void printBlankOrder()}
+                    title="Print a blank repair order to fill out by hand"
+                  >
+                    <Printer size={16} /> Print blank order
+                  </button>
+                  <button className="primary-button" onClick={startNewOrder}>
+                    <span>＋</span> New repair order
+                  </button>
+                </div>
               )}
             </section>
 

@@ -829,9 +829,11 @@ async function printWorkOrder(
 
 async function printOrderDirect(
   order: WorkOrder,
+  options?: { isBlank?: boolean },
 ): Promise<{ success: boolean; error?: string }> {
+  const isBlank = Boolean(options?.isBlank);
   const shopSettings = getSettings();
-  let html = receiptHtml(order, shopSettings);
+  let html = receiptHtml(order, shopSettings, { isBlank });
 
   const printToolbar = `
     <style>
@@ -896,8 +898,8 @@ async function printOrderDirect(
     </style>
     <div class="print-preview-bar">
       <div class="title-group">
-        <span class="order-badge">RO #${order.orderNumber}</span>
-        <span>${order.customerName ? `${order.customerName} · ` : ''}Print Preview</span>
+        <span class="order-badge">${isBlank ? 'Blank Order Form' : `RO #${order.orderNumber}`}</span>
+        <span>${isBlank ? 'Handwritten Intake Sheet · ' : order.customerName ? `${order.customerName} · ` : ''}Print Preview</span>
       </div>
       <div class="btn-group">
         <button class="btn-print" onclick="window.print()">🖨️ Print</button>
@@ -908,12 +910,16 @@ async function printOrderDirect(
 
   html = html.replace(/<body[^>]*>/i, (match) => `${match}${printToolbar}`);
 
+  const windowTitle = isBlank
+    ? 'Print Blank Order · Katia Auto Sales & Repairs'
+    : `Print - ${order.orderNumber} · Katia Auto Sales & Repairs`;
+
   const printWindow = new BrowserWindow({
     width: 980,
     height: 860,
     minWidth: 750,
     minHeight: 500,
-    title: `Print - ${order.orderNumber} · Katia Auto Sales & Repairs`,
+    title: windowTitle,
     autoHideMenuBar: true,
     backgroundColor: '#ffffff',
     webPreferences: {
@@ -949,6 +955,34 @@ async function printOrderDirect(
     console.error('Failed to open print window:', errorMsg);
     return { success: false, error: errorMsg };
   }
+}
+
+async function printBlankOrderDirect(): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  const blankOrder: WorkOrder = {
+    id: 'blank',
+    orderNumber: 'RO-________',
+    customerName: '',
+    phone: '',
+    email: '',
+    address: '',
+    vehicleYear: '',
+    vehicleMake: '',
+    vehicleModel: '',
+    vin: '',
+    licensePlate: '',
+    mileage: '',
+    dateIn: '',
+    datePromised: '',
+    concerns: '',
+    charges: [],
+    createdAt: new Date().toISOString(),
+    total: 0,
+    legacy: defaultLegacy,
+  };
+  return printOrderDirect(blankOrder, { isBlank: true });
 }
 
 function getEmailSettings(): EmailSettings {
@@ -1831,6 +1865,7 @@ app
     ipcMain.handle('work-orders:print', (_event, order: WorkOrder) =>
       printOrderDirect(order),
     );
+    ipcMain.handle('work-orders:print-blank', () => printBlankOrderDirect());
     ipcMain.handle('shell:open-path', async (_event, targetPath: string) => {
       if (typeof targetPath === 'string' && targetPath.trim()) {
         await shell.openPath(targetPath);

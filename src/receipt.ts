@@ -16,13 +16,23 @@ import {
   type TaxSettings,
 } from './workOrder';
 
-export function receiptHtml(raw: WorkOrder, settings?: TaxSettings) {
+export function receiptHtml(
+  raw: WorkOrder,
+  settings?: TaxSettings,
+  options?: { isBlank?: boolean },
+) {
+  const isBlank = Boolean(options?.isBlank);
   return settings?.receiptStyle === 'classic'
-    ? classicReceiptHtml(raw, settings)
-    : modernReceiptHtml(raw, settings);
+    ? classicReceiptHtml(raw, settings, { isBlank })
+    : modernReceiptHtml(raw, settings, { isBlank });
 }
 
-function modernReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
+function modernReceiptHtml(
+  raw: WorkOrder,
+  settings?: TaxSettings,
+  options?: { isBlank?: boolean },
+) {
+  const isBlank = Boolean(options?.isBlank);
   const order = { ...raw, ...normalizeInput(raw) };
   const details = { ...defaultLegacy, ...order.legacy };
   const e = (value: unknown) =>
@@ -183,7 +193,7 @@ function modernReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
     e(
       text.replaceAll(
         '{deposit}',
-        details.depositAmount
+        !isBlank && details.depositAmount
           ? money(Number(details.depositAmount))
           : '________',
       ),
@@ -278,6 +288,46 @@ function modernReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
       box-shadow: none !important;
       border-radius: 0 !important;
     }
+  }
+  .write-line {
+    border-bottom: 0.75pt solid #cbd5e1;
+    min-height: 14pt;
+    width: 100%;
+    margin-top: 1pt;
+  }
+  .blank-vehicle-row {
+    display: flex;
+    gap: 12pt;
+    margin-bottom: 5pt;
+  }
+  .blank-unit {
+    flex: 1;
+  }
+  .blank-vehicle-facts {
+    display: flex;
+    gap: 12pt;
+    font-size: 7.5pt;
+  }
+  .blank-fact-item {
+    flex: 1;
+  }
+  .blank-lines-table tbody tr {
+    height: 18pt;
+  }
+  .blank-lines-table tbody td {
+    border-bottom: 0.5pt solid #cbd5e1;
+  }
+  .blank-totals-table td {
+    padding: 2.5pt 0;
+  }
+  .blank-totals-table .num {
+    color: #94a3b8;
+    border-bottom: 0.5pt solid #cbd5e1;
+  }
+  .total-card-blank strong {
+    font-size: 19pt;
+    color: #94a3b8;
+    letter-spacing: 0.05em;
   }
   label {
     display: block;
@@ -431,11 +481,121 @@ function modernReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
       </div>
       <div class="number">
         <label>Repair order</label>
-        <div>${e(order.orderNumber)}</div>
+        <div>${isBlank && (!order.orderNumber || order.orderNumber === 'RO-________') ? 'RO-___________' : e(order.orderNumber)}</div>
       </div>
     </header>
 
-    <section class="hero">
+    ${
+      isBlank
+        ? `<section class="hero hero-blank">
+      <div class="hero-main">
+        <div class="blank-vehicle-row">
+          <div class="blank-unit"><label>Year</label><div class="write-line"></div></div>
+          <div class="blank-unit"><label>Make</label><div class="write-line"></div></div>
+          <div class="blank-unit"><label>Model</label><div class="write-line"></div></div>
+        </div>
+        <div class="blank-vehicle-facts mono">
+          <div class="blank-fact-item"><label>Serial no. / VIN</label><div class="write-line"></div></div>
+          <div class="blank-fact-item"><label>License plate</label><div class="write-line"></div></div>
+          <div class="blank-fact-item"><label>Mileage</label><div class="write-line"></div></div>
+        </div>
+      </div>
+      <div class="total-card total-card-blank">
+        <label>Total amount</label>
+        <strong>$ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</strong>
+      </div>
+    </section>
+
+    <section class="facts blank-facts">
+      <div class="fact fact-customer">
+        <label>Customer name</label>
+        <div class="write-line"></div>
+      </div>
+      <div class="fact">
+        <label>Business / Cell Phone</label>
+        <div class="write-line"></div>
+      </div>
+      <div class="fact">
+        <label>Date in</label>
+        <div class="write-line"></div>
+      </div>
+      <div class="fact">
+        <label>Delivery date</label>
+        <div class="write-line"></div>
+      </div>
+      <div class="fact fact-customer">
+        <label>Street address, City, State, ZIP</label>
+        <div class="write-line"></div>
+      </div>
+      <div class="fact">
+        <label>Customer email</label>
+        <div class="write-line"></div>
+      </div>
+      <div class="fact">
+        <label>Written by</label>
+        <div class="write-line"></div>
+      </div>
+      <div class="fact">
+        <label>Technician</label>
+        <div class="write-line"></div>
+      </div>
+      <div class="fact fact-wide">
+        <label>Terms</label>
+        <div>Balance due at vehicle pickup</div>
+      </div>
+      <div class="fact">
+        <label>Call when ready</label>
+        <div><span class="box"></span> Yes &nbsp;&nbsp; <span class="box"></span> No</div>
+      </div>
+    </section>
+
+    <section class="request blank-request">
+      <label>Services requested / customer concerns / damage notes</label>
+      <div class="write-line" style="margin-top: 3pt;"></div>
+      <div class="write-line" style="margin-top: 7pt;"></div>
+      <div class="write-line" style="margin-top: 7pt;"></div>
+    </section>
+
+    <table class="lines blank-lines-table">
+      <thead>
+        <tr>
+          <th class="qty" style="width: 32pt;">Qty</th>
+          <th style="width: 65pt;">Part No.</th>
+          <th>Work Description / Replacement Parts</th>
+          <th class="num" style="width: 60pt;">Unit Price</th>
+          <th class="tax" style="width: 30pt;">Tax</th>
+          <th class="num" style="width: 65pt;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${Array.from({ length: 9 })
+          .map(
+            () =>
+              `<tr class="line blank-row">
+                <td class="qty">&nbsp;</td>
+                <td></td>
+                <td></td>
+                <td class="num"></td>
+                <td class="tax"></td>
+                <td class="num amount"></td>
+              </tr>`,
+          )
+          .join('')}
+      </tbody>
+    </table>
+
+    <div class="closing">
+    <section class="summary">
+      <div class="summary-notes"></div>
+      <table class="totals blank-totals-table">
+        <tr><td>Labor</td><td class="num">$ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td></tr>
+        <tr><td>Parts</td><td class="num">$ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td></tr>
+        <tr><td>Sublet / Other</td><td class="num">$ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td></tr>
+        <tr><td>Tax</td><td class="num">$ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td></tr>
+        <tr class="grand"><td>Total amount</td><td class="num">$ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td></tr>
+      </table>
+    </section>`
+        : `<section class="hero">
       <div class="hero-main">
         <div class="vehicle">${e(vehicleName) || 'Vehicle not specified'}</div>
         ${vehicleFacts ? `<div class="vehicle-facts mono">${vehicleFacts}</div>` : ''}
@@ -492,7 +652,8 @@ function modernReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
         ${hasRevised ? totalRow('Initial total', totals.total, 'step') + totalRow('Additional work', addlTotal) : ''}
         ${totalRow(hasRevised ? 'Revised total' : 'Total amount', finalTotal, 'grand')}
       </table>
-    </section>
+    </section>`
+    }
 
     <section class="legal">
       <div class="notices">
@@ -509,14 +670,14 @@ function modernReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
           <label>Customer signature</label>
         </div>
         <div class="sign-date">
-          <div class="sign-line">${e(date(details.signatureDate))}</div>
+          <div class="sign-line">${isBlank ? '' : e(date(details.signatureDate))}</div>
           <label>Date</label>
         </div>
         <div class="sign-options">
           <span class="option-label">Save old parts</span>
-          <span class="choice"><span class="box">${details.saveOldParts === 'Yes' ? '✓' : ''}</span>Yes</span>
-          <span class="choice"><span class="box">${details.saveOldParts === 'No' ? '✓' : ''}</span>No</span>
-          ${details.depositAmount ? `<div class="deposit">Special order deposit ${money(Number(details.depositAmount))}</div>` : ''}
+          <span class="choice"><span class="box">${!isBlank && details.saveOldParts === 'Yes' ? '✓' : ''}</span>Yes</span>
+          <span class="choice"><span class="box">${!isBlank && details.saveOldParts === 'No' ? '✓' : ''}</span>No</span>
+          ${!isBlank && details.depositAmount ? `<div class="deposit">Special order deposit ${money(Number(details.depositAmount))}</div>` : ''}
         </div>
       </div>
     </section>

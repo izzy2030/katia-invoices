@@ -14,7 +14,12 @@ import {
 } from './workOrder';
 
 /** Original landscape form layout, with blank rows for handwritten additions. */
-export function classicReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
+export function classicReceiptHtml(
+  raw: WorkOrder,
+  settings?: TaxSettings,
+  options?: { isBlank?: boolean },
+) {
+  const isBlank = Boolean(options?.isBlank);
   const order = { ...raw, ...normalizeInput(raw) };
   const details = { ...defaultLegacy, ...order.legacy };
   const e = (value: unknown) =>
@@ -32,7 +37,7 @@ export function classicReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
   const money = (value: number) =>
     value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
   const field = (label: string, value: unknown, className = '') =>
-    `<div class="field ${className}"><label>${e(label)}</label><div>${e(value) || '—'}</div></div>`;
+    `<div class="field ${className}"><label>${e(label)}</label><div>${isBlank ? '&nbsp;' : e(value) || '—'}</div></div>`;
 
   const totals = chargeTotals(order);
   const otherTotal = otherChargesTotal(totals);
@@ -41,10 +46,12 @@ export function classicReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
     : 'Tax';
 
   // Parts rows with minimum filler rows to balance the page
-  const partLines = order.charges.filter(
-    (line) => line.kind === 'parts' && (line.description || line.amount),
-  );
-  const minPartsRows = 7;
+  const partLines = isBlank
+    ? []
+    : order.charges.filter(
+        (line) => line.kind === 'parts' && (line.description || line.amount),
+      );
+  const minPartsRows = isBlank ? 12 : 7;
   const partsHtmlRows = partLines.map(
     (line) =>
       `<tr><td>${e(line.quantity || '1')}</td><td>${e(line.partNumber)}</td><td>${e(line.description)}</td><td class="amount">${line.unitPrice ? money(Number(line.unitPrice)) : '—'}</td><td class="tax-cell">${(line.taxable ?? defaultTaxable(line.kind)) ? 'Tax' : '—'}</td><td class="amount">${money(lineTotal(line))}</td></tr>`,
@@ -56,10 +63,12 @@ export function classicReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
   }
 
   // Labor & other charges rows with minimum filler rows
-  const laborLines = order.charges.filter(
-    (line) => line.kind !== 'parts' && (line.description || line.amount),
-  );
-  const minLaborRows = 6;
+  const laborLines = isBlank
+    ? []
+    : order.charges.filter(
+        (line) => line.kind !== 'parts' && (line.description || line.amount),
+      );
+  const minLaborRows = isBlank ? 10 : 6;
   const laborHtmlRows = laborLines.map(
     (line) =>
       `<tr><td>${e(line.quantity || '1')}</td><td>${e(line.partNumber)}</td><td>${e(line.description)}<small class="line-kind">${e(line.kind)}</small></td><td class="amount">${line.unitPrice ? money(Number(line.unitPrice)) : '—'}</td><td class="tax-cell">${(line.taxable ?? defaultTaxable(line.kind)) ? 'Tax' : '—'}</td><td class="amount">${money(lineTotal(line))}</td></tr>`,
@@ -70,7 +79,7 @@ export function classicReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
     );
   }
 
-  const partsTable = `<section class="sec-parts"><h2>Parts (all parts new unless otherwise specified)</h2><table class="lines parts-lines"><thead><tr><th style="width:7%">Qty</th><th style="width:23%">Part no.</th><th>Description</th><th style="width:13%">Unit</th><th style="width:8%">Tax</th><th style="width:16%">Amount</th></tr></thead><tbody>${partsHtmlRows.join('')}</tbody><tfoot><tr class="table-subtotal"><td colspan="5">TOTAL PARTS</td><td class="amount">${money(totals.parts)}</td></tr></tfoot></table></section>`;
+  const partsTable = `<section class="sec-parts"><h2>Parts (all parts new unless otherwise specified)</h2><table class="lines parts-lines"><thead><tr><th style="width:7%">Qty</th><th style="width:23%">Part no.</th><th>Description</th><th style="width:13%">Unit</th><th style="width:8%">Tax</th><th style="width:16%">Amount</th></tr></thead><tbody>${partsHtmlRows.join('')}</tbody><tfoot><tr class="table-subtotal"><td colspan="5">TOTAL PARTS</td><td class="amount">${isBlank ? '&nbsp;' : money(totals.parts)}</td></tr></tfoot></table></section>`;
 
   const laborTable = `<section class="sec-labor"><h2>Labor / services / other charges</h2><table class="lines labor-lines"><thead><tr><th style="width:7%">Qty</th><th style="width:16%">Part no.</th><th>Description</th><th style="width:13%">Unit</th><th style="width:8%">Tax</th><th style="width:16%">Amount</th></tr></thead><tbody>${laborHtmlRows.join('')}</tbody></table></section>`;
 
@@ -102,7 +111,7 @@ export function classicReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
       .join(' | ');
 
     let revHtml = '';
-    if (hasRevised) {
+    if (hasRevised && !isBlank) {
       const parts = moneyValue(details.revisedParts);
       const labor = moneyValue(details.revisedLabor);
       const addlTotal = hasSupplement
@@ -144,13 +153,13 @@ export function classicReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
         <div class="approval-card">
           <div class="card-head">ESTIMATED COSTS &amp; AUTHORIZATION</div>
           <div class="stat-grid five">
-            <div><label>PARTS</label><span>${money(totals.parts)}</span></div>
-            <div><label>LABOR</label><span>${money(totals.labor)}</span></div>
-            <div><label>OTHER</label><span>${money(otherTotal)}</span></div>
-            <div><label>${e(taxLabel)}</label><span>${money(totals.tax)}</span></div>
-            <div class="highlight"><label>TOTAL</label><strong>${money(totals.total)}</strong></div>
+            <div><label>PARTS</label><span>${isBlank ? '&nbsp;' : money(totals.parts)}</span></div>
+            <div><label>LABOR</label><span>${isBlank ? '&nbsp;' : money(totals.labor)}</span></div>
+            <div><label>OTHER</label><span>${isBlank ? '&nbsp;' : money(otherTotal)}</span></div>
+            <div><label>${e(taxLabel)}</label><span>${isBlank ? '&nbsp;' : money(totals.tax)}</span></div>
+            <div class="highlight"><label>TOTAL</label><strong>${isBlank ? '&nbsp;' : money(totals.total)}</strong></div>
           </div>
-          ${estAuth ? `<div class="auth-meta"><strong>Authorized:</strong> ${estAuth}</div>` : ''}
+          ${!isBlank && estAuth ? `<div class="auth-meta"><strong>Authorized:</strong> ${estAuth}</div>` : ''}
         </div>
         ${revHtml}
       </div>`;
@@ -160,7 +169,7 @@ export function classicReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
     e(
       text.replaceAll(
         '{deposit}',
-        details.depositAmount
+        !isBlank && details.depositAmount
           ? money(Number(details.depositAmount))
           : '________',
       ),
@@ -178,13 +187,13 @@ export function classicReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
         <div class="sign-main">
           <div class="sign-line-wrap">
             <span class="sign-mark">X</span>
-            ${hasDigitalSignature ? `<img class="signature" src="${details.signature}" alt="Customer signature">` : '<div class="signature-pen-space"></div>'}
+            ${!isBlank && hasDigitalSignature ? `<img class="signature" src="${details.signature}" alt="Customer signature">` : '<div class="signature-pen-space"></div>'}
           </div>
           <div class="sign-caption">CUSTOMER SIGNATURE</div>
         </div>
         <div class="sign-date">
           <div class="sign-line-wrap">
-            <div class="signature-pen-space">${e(details.signatureDate)}</div>
+            <div class="signature-pen-space">${isBlank ? '' : e(details.signatureDate)}</div>
           </div>
           <div class="sign-caption">DATE</div>
         </div>
@@ -192,10 +201,10 @@ export function classicReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
       <div class="sign-options">
         <div class="save-parts-block">
           <span class="option-label">SAVE OLD PARTS:</span>
-          <span class="checkbox-option"><span class="box">${details.saveOldParts === 'Yes' ? '✓' : ''}</span> YES</span>
-          <span class="checkbox-option"><span class="box">${details.saveOldParts === 'No' ? '✓' : ''}</span> NO</span>
+          <span class="checkbox-option"><span class="box">${!isBlank && details.saveOldParts === 'Yes' ? '✓' : ''}</span> YES</span>
+          <span class="checkbox-option"><span class="box">${!isBlank && details.saveOldParts === 'No' ? '✓' : ''}</span> NO</span>
         </div>
-        ${details.depositAmount ? `<div class="deposit-block"><strong>SPECIAL ORDER DEPOSIT:</strong> ${money(Number(details.depositAmount))}</div>` : ''}
+        ${!isBlank && details.depositAmount ? `<div class="deposit-block"><strong>SPECIAL ORDER DEPOSIT:</strong> ${money(Number(details.depositAmount))}</div>` : ''}
       </div>
     </div>`;
 
@@ -409,8 +418,8 @@ export function classicReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
           </div>
         </div>
         <div class="number">
-          REPAIR ORDER ${e(order.orderNumber)}
-          <small>Date in: ${e(order.dateIn)} · Delivery: ${e(order.datePromised) || '—'}</small>
+          REPAIR ORDER ${isBlank && (!order.orderNumber || order.orderNumber === 'RO-________') ? 'RO-___________' : e(order.orderNumber)}
+          <small>Date in: ${isBlank ? '____________' : e(order.dateIn)} · Delivery: ${isBlank ? '____________' : e(order.datePromised) || '—'}</small>
         </div>
       </header>
 
@@ -466,14 +475,14 @@ export function classicReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
             </div>
             <div class="totals-side">
               <table class="totals-table">
-                <tr><td>Total labor</td><td class="amount">${money(totals.labor)}</td></tr>
-                <tr><td>Total parts</td><td class="amount">${money(totals.parts)}</td></tr>
-                <tr><td>Total sublet</td><td class="amount">${money(totals.sublet)}</td></tr>
-                <tr><td>Gas, oil and grease</td><td class="amount">${money(totals.fluids)}</td></tr>
-                <tr><td>EPA / waste disposal</td><td class="amount">${money(totals.disposal)}</td></tr>
-                <tr><td>Other</td><td class="amount">${money(totals.other)}</td></tr>
-                <tr><td>${e(taxLabel)}</td><td class="amount">${money(totals.tax)}</td></tr>
-                <tr class="grand-row"><td>TOTAL AMOUNT</td><td class="amount">${money(totals.total)}</td></tr>
+                <tr><td>Total labor</td><td class="amount">${isBlank ? '&nbsp;' : money(totals.labor)}</td></tr>
+                <tr><td>Total parts</td><td class="amount">${isBlank ? '&nbsp;' : money(totals.parts)}</td></tr>
+                <tr><td>Total sublet</td><td class="amount">${isBlank ? '&nbsp;' : money(totals.sublet)}</td></tr>
+                <tr><td>Gas, oil and grease</td><td class="amount">${isBlank ? '&nbsp;' : money(totals.fluids)}</td></tr>
+                <tr><td>EPA / waste disposal</td><td class="amount">${isBlank ? '&nbsp;' : money(totals.disposal)}</td></tr>
+                <tr><td>Other</td><td class="amount">${isBlank ? '&nbsp;' : money(totals.other)}</td></tr>
+                <tr><td>${e(taxLabel)}</td><td class="amount">${isBlank ? '&nbsp;' : money(totals.tax)}</td></tr>
+                <tr class="grand-row"><td>TOTAL AMOUNT</td><td class="amount">${isBlank ? '&nbsp;' : money(totals.total)}</td></tr>
               </table>
             </div>
           </div>

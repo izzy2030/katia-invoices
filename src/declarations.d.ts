@@ -45,6 +45,7 @@ interface Window {
     printOrder: (
       order: WorkOrder,
     ) => Promise<{ success: boolean; error?: string }>;
+    printBlankOrder: () => Promise<{ success: boolean; error?: string }>;
     openPath: (targetPath: string) => Promise<boolean>;
     exportBackupJson: () => Promise<boolean>;
     exportBackupSqlite: () => Promise<boolean>;
