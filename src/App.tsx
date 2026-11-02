@@ -1365,14 +1365,6 @@ function App() {
                         setForm((current) => ({ ...current, charges }))
                       }
                     />
-                    <Field
-                      label="Sales tax rate (%)"
-                      name="taxRate"
-                      value={form.taxRate ?? ''}
-                      onChange={updateField}
-                      placeholder="8.25"
-                      type="number"
-                    />
                     <div className="cost-summary">
                       {(
                         [
@@ -1398,6 +1390,32 @@ function App() {
                         {form.taxRate ? ` (${form.taxRate}%)` : ''}
                         <strong>${totals.tax.toFixed(2)}</strong>
                       </span>
+                      <div className="cost-summary-tax-rate">
+                        <label
+                          htmlFor="summary-tax-rate"
+                          className="cost-summary-tax-label"
+                        >
+                          Tax rate
+                        </label>
+                        <div className="cost-summary-tax-input-wrap">
+                          <input
+                            id="summary-tax-rate"
+                            name="taxRate"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            value={form.taxRate ?? ''}
+                            onChange={(event) =>
+                              updateField('taxRate', event.target.value)
+                            }
+                            placeholder="8.25"
+                            className="cost-summary-tax-input"
+                            aria-label="Sales tax rate percentage"
+                          />
+                          <span className="cost-summary-tax-suffix">%</span>
+                        </div>
+                      </div>
                     </div>
                     <div className="total-preview">
                       <span>Estimated total</span>
