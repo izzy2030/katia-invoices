@@ -408,19 +408,6 @@ function CustomersView({
                         Last {day(vehicle.lastVisit)}
                       </span>
                     </div>
-                    <div className="vehicle-card-actions">
-                      <button
-                        type="button"
-                        className="add-vehicle-pill-btn"
-                        onClick={() => {
-                          setVehicleError('');
-                          setAddingVehicle(true);
-                        }}
-                        title="Add a new vehicle for this customer"
-                      >
-                        Add Vehicle
-                      </button>
-                    </div>
                   </div>
                 ))}
               </div>

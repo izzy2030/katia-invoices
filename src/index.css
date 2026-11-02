@@ -3420,45 +3420,6 @@ button:focus-visible {
   color: var(--accent);
 }
 
-.vehicle-card-actions {
-  align-items: center;
-  display: flex;
-  gap: 8px;
-}
-
-.add-vehicle-pill-btn {
-  align-items: center;
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-border);
-  border-radius: var(--radius-sm);
-  color: var(--accent-strong);
-  cursor: pointer;
-  display: inline-flex;
-  font-size: 12px;
-  font-weight: 600;
-  gap: 5px;
-  padding: 6px 14px;
-  transition: all 0.14s ease;
-  white-space: nowrap;
-}
-
-.add-vehicle-pill-btn:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff !important;
-}
-
-[data-theme='abyssal'] .add-vehicle-pill-btn {
-  background: rgba(37, 99, 235, 0.15);
-  border-color: rgba(37, 99, 235, 0.35);
-  color: #60a5fa;
-}
-
-[data-theme='abyssal'] .add-vehicle-pill-btn:hover {
-  background: var(--accent);
-  color: #fff !important;
-}
-
 .vehicle-empty-state {
   align-items: center;
   background: var(--surface-subtle);
