@@ -7,13 +7,11 @@ import {
 import { receiptHtml } from './receipt';
 import { escapeHtml } from './html';
 import {
-  builtInTaxDefaults,
   normalizeDashboardPreferences,
   type DashboardPreferences,
   defaultLegacy,
   normalizeInput,
-  normalizeReceiptStyle,
-  normalizeTaxDefaults,
+  validateWorkOrderAmounts,
   chargeTotals,
   otherChargesTotal,
   normalizeStatus,
@@ -40,8 +38,11 @@ import {
 } from './gmailAuth';
 import {
   buildBackupPayload,
+  ensureBackupSchema,
   exportSqliteSnapshot,
+  getSettingsFromDb,
   restoreBackupFromFile,
+  writeSettingsToDb,
   type BackupImportMode,
   type BackupImportResult,
 } from './backupService';
@@ -64,60 +65,7 @@ function initializeDatabase() {
   databaseFilePath = path.join(app.getPath('userData'), fileName);
   database = new DatabaseSync(databaseFilePath);
   database.exec('PRAGMA journal_mode = WAL;');
-  database.exec(`
-    CREATE TABLE IF NOT EXISTS work_orders (
-      id TEXT PRIMARY KEY,
-      order_number TEXT NOT NULL UNIQUE,
-      customer_name TEXT NOT NULL,
-      vehicle TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'Open',
-      data_json TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS app_settings (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS customer_contacts (
-      customer_key TEXT PRIMARY KEY,
-      phone TEXT NOT NULL DEFAULT '',
-      address TEXT NOT NULL DEFAULT ''
-    );
-    CREATE TABLE IF NOT EXISTS customer_vehicles (
-      id TEXT PRIMARY KEY,
-      customer_key TEXT NOT NULL,
-      year TEXT NOT NULL DEFAULT '',
-      make TEXT NOT NULL DEFAULT '',
-      model TEXT NOT NULL DEFAULT '',
-      vin TEXT NOT NULL DEFAULT '',
-      license_plate TEXT NOT NULL DEFAULT '',
-      mileage TEXT NOT NULL DEFAULT '',
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS catalog_presets (
-      id TEXT PRIMARY KEY,
-      category TEXT NOT NULL,
-      shortcut TEXT NOT NULL UNIQUE,
-      name TEXT NOT NULL,
-      description TEXT NOT NULL,
-      part_number TEXT NOT NULL DEFAULT '',
-      default_price REAL NOT NULL DEFAULT 0,
-      default_quantity REAL NOT NULL DEFAULT 1,
-      taxable INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL
-    );
-  `);
-  const contactColumns = database
-    .prepare('PRAGMA table_info(customer_contacts)')
-    .all() as Array<{ name: string }>;
-  if (!contactColumns.some((column) => column.name === 'name'))
-    database.exec(
-      "ALTER TABLE customer_contacts ADD COLUMN name TEXT NOT NULL DEFAULT ''",
-    );
-  if (!contactColumns.some((column) => column.name === 'email'))
-    database.exec(
-      "ALTER TABLE customer_contacts ADD COLUMN email TEXT NOT NULL DEFAULT ''",
-    );
+  ensureBackupSchema(database);
 
   try {
     const count = (
@@ -126,29 +74,14 @@ function initializeDatabase() {
         .get() as { count: number }
     ).count;
     if (count === 0) {
-      const insert = database.prepare(`
-        INSERT INTO catalog_presets (
-          id, category, shortcut, name, description, part_number,
-          default_price, default_quantity, taxable, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
       database.exec('BEGIN IMMEDIATE;');
-      const now = new Date().toISOString();
-      for (const preset of defaultBodyShopPresets) {
-        insert.run(
-          randomUUID(),
-          preset.category,
-          preset.shortcut,
-          preset.name,
-          preset.description,
-          preset.partNumber ?? '',
-          preset.defaultPrice,
-          preset.defaultQuantity ?? 1,
-          preset.taxable ? 1 : 0,
-          now,
-        );
+      try {
+        seedCatalogPresets(database);
+        database.exec('COMMIT;');
+      } catch (error) {
+        database.exec('ROLLBACK;');
+        throw error;
       }
-      database.exec('COMMIT;');
     }
   } catch (seedErr) {
     console.warn('Could not auto-seed default body shop presets:', seedErr);
@@ -399,31 +332,35 @@ function deleteCatalogPreset(id: string): boolean {
   return res.changes > 0;
 }
 
+function seedCatalogPresets(db: DatabaseSync) {
+  const insert = db.prepare(`
+    INSERT INTO catalog_presets (
+      id, category, shortcut, name, description, part_number,
+      default_price, default_quantity, taxable, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const now = new Date().toISOString();
+  for (const preset of defaultBodyShopPresets) {
+    insert.run(
+      randomUUID(),
+      preset.category,
+      preset.shortcut,
+      preset.name,
+      preset.description,
+      preset.partNumber ?? '',
+      preset.defaultPrice,
+      preset.defaultQuantity ?? 1,
+      preset.taxable ? 1 : 0,
+      now,
+    );
+  }
+}
+
 function resetCatalogPresets(): CatalogPreset[] {
   database.exec('BEGIN IMMEDIATE;');
   try {
     database.exec('DELETE FROM catalog_presets;');
-    const insert = database.prepare(`
-      INSERT INTO catalog_presets (
-        id, category, shortcut, name, description, part_number,
-        default_price, default_quantity, taxable, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    const now = new Date().toISOString();
-    for (const preset of defaultBodyShopPresets) {
-      insert.run(
-        randomUUID(),
-        preset.category,
-        preset.shortcut,
-        preset.name,
-        preset.description,
-        preset.partNumber ?? '',
-        preset.defaultPrice,
-        preset.defaultQuantity ?? 1,
-        preset.taxable ? 1 : 0,
-        now,
-      );
-    }
+    seedCatalogPresets(database);
     database.exec('COMMIT;');
   } catch (err) {
     database.exec('ROLLBACK;');
@@ -466,27 +403,10 @@ function setWorkOrderStatus(id: string, status: string): WorkOrder {
 function validateWorkOrder(input: WorkOrderInput) {
   if (!input.customerName?.trim())
     throw new Error('Customer name is required.');
-  const cleanNumber = (val: unknown) => {
-    const s = String(val ?? '')
-      .trim()
-      .replace(/[$,]/g, '');
-    return s === '' ? 0 : Number(s);
-  };
-  const amounts = [
-    cleanNumber(input.taxRate),
-    ...input.charges.map((line) => cleanNumber(line.unitPrice ?? line.amount)),
-    ...input.charges.map((line) => cleanNumber(line.quantity ?? '1')),
-    ...(input.revisedCharges ?? []).flatMap((line) => [
-      cleanNumber(line.unitPrice ?? line.amount),
-      cleanNumber(line.quantity ?? '1'),
-    ]),
-    cleanNumber(input.legacy?.depositAmount),
-  ];
-  if (amounts.some((value) => !Number.isFinite(value) || value < 0)) {
-    throw new Error(
-      'Amounts, quantities, and the tax rate must be valid, nonnegative numbers.',
-    );
-  }
+  validateWorkOrderAmounts(
+    input,
+    'Amounts, quantities, and the tax rate must be valid, nonnegative numbers.',
+  );
 }
 
 function saveWorkOrder(input: WorkOrderInput): WorkOrder {
@@ -601,162 +521,21 @@ function readSetting(key: string) {
   )?.value;
 }
 
-function getSettings(): TaxSettings {
-  const rawDefaults = readSetting('tax_defaults');
-  let defaults = builtInTaxDefaults;
-  if (rawDefaults) {
-    try {
-      defaults = normalizeTaxDefaults(JSON.parse(rawDefaults));
-    } catch {
-      defaults = builtInTaxDefaults;
-    }
-  }
-  return {
-    taxRate: readSetting('tax_rate') ?? '',
-    defaults,
-    nextOrderNumber: readSetting('next_order_number') ?? '1',
-    shopName: readSetting('shop_name') ?? 'Katia Auto Sales & Repairs',
-    shopPhone: readSetting('shop_phone') ?? '(630) 907-7198',
-    shopAddress:
-      readSetting('shop_address') ?? '1005 Rural St, Aurora, IL 60505',
-    shopCity: readSetting('shop_city') ?? 'Aurora',
-    shopState: readSetting('shop_state') ?? 'IL',
-    shopZip: readSetting('shop_zip') ?? '60505',
-    defaultTerms: readSetting('shop_terms') ?? 'Balance due at vehicle pickup',
-    defaultWrittenBy: readSetting('shop_written_by') ?? '',
-    defaultTechnician: readSetting('shop_technician') ?? '',
-    defaultCallWhenReady: readSetting('shop_call_when_ready') ?? 'Yes',
-    defaultSaveOldParts: readSetting('shop_save_old_parts') ?? 'Yes',
-    receiptStyle: normalizeReceiptStyle(readSetting('receipt_style')),
-  };
-}
-
 function saveSettings(settings: TaxSettings): TaxSettings {
   const taxRate = (settings.taxRate ?? '').trim();
   const rate = Number(taxRate);
   if (taxRate && (!Number.isFinite(rate) || rate < 0)) {
     throw new Error('The sales tax rate must be a nonnegative number.');
   }
-  const nextOrderNumber = String(
-    Number((settings.nextOrderNumber ?? '').replace(/\D/g, '')) || 1,
-  );
-  const shopName = (settings.shopName ?? 'Katia Auto Sales & Repairs').trim();
-  const shopPhone = (settings.shopPhone ?? '(630) 907-7198').trim();
-  const shopAddress = (
-    settings.shopAddress ?? '1005 Rural St, Aurora, IL 60505'
-  ).trim();
-  const shopCity = (settings.shopCity ?? 'Aurora').trim();
-  const shopState = (settings.shopState ?? 'IL').trim();
-  const shopZip = (settings.shopZip ?? '60505').trim();
-  const defaultTerms = (
-    settings.defaultTerms ?? 'Balance due at vehicle pickup'
-  ).trim();
-  const defaultWrittenBy = (settings.defaultWrittenBy ?? '').trim();
-  const defaultTechnician = (settings.defaultTechnician ?? '').trim();
-  const defaultCallWhenReady = settings.defaultCallWhenReady ?? 'Yes';
-  const defaultSaveOldParts = settings.defaultSaveOldParts ?? 'Yes';
-  const receiptStyle = normalizeReceiptStyle(settings.receiptStyle);
-  const defaults = normalizeTaxDefaults(settings.defaults);
-
   database.exec('BEGIN IMMEDIATE;');
   try {
-    database
-      .prepare(
-        "INSERT INTO app_settings (key, value) VALUES ('tax_rate', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      )
-      .run(taxRate);
-    database
-      .prepare(
-        "INSERT INTO app_settings (key, value) VALUES ('tax_defaults', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      )
-      .run(JSON.stringify(defaults));
-    database
-      .prepare(
-        "INSERT INTO app_settings (key, value) VALUES ('next_order_number', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      )
-      .run(nextOrderNumber);
-    database
-      .prepare(
-        "INSERT INTO app_settings (key, value) VALUES ('shop_name', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      )
-      .run(shopName);
-    database
-      .prepare(
-        "INSERT INTO app_settings (key, value) VALUES ('shop_phone', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      )
-      .run(shopPhone);
-    database
-      .prepare(
-        "INSERT INTO app_settings (key, value) VALUES ('shop_address', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      )
-      .run(shopAddress);
-    database
-      .prepare(
-        "INSERT INTO app_settings (key, value) VALUES ('shop_city', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      )
-      .run(shopCity);
-    database
-      .prepare(
-        "INSERT INTO app_settings (key, value) VALUES ('shop_state', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      )
-      .run(shopState);
-    database
-      .prepare(
-        "INSERT INTO app_settings (key, value) VALUES ('shop_zip', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      )
-      .run(shopZip);
-    database
-      .prepare(
-        "INSERT INTO app_settings (key, value) VALUES ('shop_terms', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      )
-      .run(defaultTerms);
-    database
-      .prepare(
-        "INSERT INTO app_settings (key, value) VALUES ('shop_written_by', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      )
-      .run(defaultWrittenBy);
-    database
-      .prepare(
-        "INSERT INTO app_settings (key, value) VALUES ('shop_technician', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      )
-      .run(defaultTechnician);
-    database
-      .prepare(
-        "INSERT INTO app_settings (key, value) VALUES ('shop_call_when_ready', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      )
-      .run(defaultCallWhenReady);
-    database
-      .prepare(
-        "INSERT INTO app_settings (key, value) VALUES ('shop_save_old_parts', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      )
-      .run(defaultSaveOldParts);
-    database
-      .prepare(
-        "INSERT INTO app_settings (key, value) VALUES ('receipt_style', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      )
-      .run(receiptStyle);
+    writeSettingsToDb(database, settings);
     database.exec('COMMIT;');
   } catch (error) {
     database.exec('ROLLBACK;');
     throw error;
   }
-  return {
-    taxRate,
-    defaults,
-    nextOrderNumber,
-    shopName,
-    shopPhone,
-    shopAddress,
-    shopCity,
-    shopState,
-    shopZip,
-    defaultTerms,
-    defaultWrittenBy,
-    defaultTechnician,
-    defaultCallWhenReady,
-    defaultSaveOldParts,
-    receiptStyle,
-  };
+  return getSettingsFromDb(database);
 }
 
 function localDate(offsetDays = 0) {
@@ -966,7 +745,7 @@ async function generateOrderPdfBuffer(order: WorkOrder): Promise<Buffer> {
     },
   });
   try {
-    const shopSettings = getSettings();
+    const shopSettings = getSettingsFromDb(database);
     await printWindow.loadURL(
       `data:text/html;charset=utf-8,${encodeURIComponent(receiptHtml(order, shopSettings))}`,
     );
@@ -1001,7 +780,7 @@ async function printOrderDirect(
 ): Promise<{ success: boolean; error?: string }> {
   const isBlank = Boolean(options?.isBlank);
   const autoPrint = options?.autoPrint !== false;
-  const shopSettings = getSettings();
+  const shopSettings = getSettingsFromDb(database);
   let html = receiptHtml(order, shopSettings, { isBlank });
 
   const printToolbar = `
@@ -1159,7 +938,7 @@ async function printBlankOrderDirect(): Promise<{
 async function handleSendGmailTestEmail(
   recipientEmail: string,
 ): Promise<{ success: boolean; messageId: string; senderEmail: string }> {
-  const shopSettings = getSettings();
+  const shopSettings = getSettingsFromDb(database);
   const shopName = shopSettings.shopName || 'Katia Auto Sales & Repairs';
 
   const html = `
@@ -1228,7 +1007,7 @@ async function handleSendGmailOrderEmail(options: {
   };
 
   const pdfBuffer = await generateOrderPdfBuffer(fullOrder);
-  const shopSettings = getSettings();
+  const shopSettings = getSettingsFromDb(database);
   const shopName = shopSettings.shopName || 'Katia Auto Sales & Repairs';
   const totals = chargeTotals(fullOrder);
   const vehicleName =
@@ -1694,7 +1473,7 @@ app
         .run(JSON.stringify(saved));
       return saved;
     });
-    ipcMain.handle('settings:get', () => getSettings());
+    ipcMain.handle('settings:get', () => getSettingsFromDb(database));
     ipcMain.handle('settings:save', (_event, settings: TaxSettings) =>
       saveSettings(settings),
     );

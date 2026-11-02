@@ -15,6 +15,7 @@ import {
   normalizeStatus,
   normalizeReceiptStyle,
   normalizeTaxDefaults,
+  validateWorkOrderAmounts,
   type DashboardPreferences,
   type TaxSettings,
   type WorkOrder,
@@ -64,6 +65,17 @@ export function ensureBackupSchema(database: DatabaseSync): void {
       customer_key TEXT PRIMARY KEY,
       phone TEXT NOT NULL DEFAULT '',
       address TEXT NOT NULL DEFAULT ''
+    );
+    CREATE TABLE IF NOT EXISTS customer_vehicles (
+      id TEXT PRIMARY KEY,
+      customer_key TEXT NOT NULL,
+      year TEXT NOT NULL DEFAULT '',
+      make TEXT NOT NULL DEFAULT '',
+      model TEXT NOT NULL DEFAULT '',
+      vin TEXT NOT NULL DEFAULT '',
+      license_plate TEXT NOT NULL DEFAULT '',
+      mileage TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS catalog_presets (
       id TEXT PRIMARY KEY,
@@ -249,27 +261,10 @@ export function buildBackupPayload(database: DatabaseSync): BackupPayload {
 }
 
 function validateBackupWorkOrderAmounts(input: WorkOrderInput): void {
-  const cleanNumber = (val: unknown) => {
-    const s = String(val ?? '')
-      .trim()
-      .replace(/[$,]/g, '');
-    return s === '' ? 0 : Number(s);
-  };
-  const amounts = [
-    cleanNumber(input.taxRate),
-    ...input.charges.map((line) => cleanNumber(line.unitPrice ?? line.amount)),
-    ...input.charges.map((line) => cleanNumber(line.quantity ?? '1')),
-    ...(input.revisedCharges ?? []).flatMap((line) => [
-      cleanNumber(line.unitPrice ?? line.amount),
-      cleanNumber(line.quantity ?? '1'),
-    ]),
-    cleanNumber(input.legacy?.depositAmount),
-  ];
-  if (amounts.some((value) => !Number.isFinite(value) || value < 0)) {
-    throw new Error(
-      'Backup contains a repair order with invalid or negative amounts.',
-    );
-  }
+  validateWorkOrderAmounts(
+    input,
+    'Backup contains a repair order with invalid or negative amounts.',
+  );
 }
 
 export function parseBackupJson(rawText: string): BackupPayload {

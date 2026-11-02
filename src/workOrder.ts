@@ -201,6 +201,31 @@ export type WorkOrder = WorkOrderInput & {
   createdAt: string;
   total: number;
 };
+export function validateWorkOrderAmounts(
+  input: WorkOrderInput,
+  message: string,
+): void {
+  const cleanNumber = (val: unknown) => {
+    const s = String(val ?? '')
+      .trim()
+      .replace(/[$,]/g, '');
+    return s === '' ? 0 : Number(s);
+  };
+  const amounts = [
+    cleanNumber(input.taxRate),
+    ...input.charges.map((line) => cleanNumber(line.unitPrice ?? line.amount)),
+    ...input.charges.map((line) => cleanNumber(line.quantity ?? '1')),
+    ...(input.revisedCharges ?? []).flatMap((line) => [
+      cleanNumber(line.unitPrice ?? line.amount),
+      cleanNumber(line.quantity ?? '1'),
+    ]),
+    cleanNumber(input.legacy?.depositAmount),
+  ];
+  if (amounts.some((value) => !Number.isFinite(value) || value < 0)) {
+    throw new Error(message);
+  }
+}
+
 export const moneyValue = (value: string) =>
   Math.round((Number(String(value ?? '').replace(/[$,]/g, '')) || 0) * 100) /
   100;
