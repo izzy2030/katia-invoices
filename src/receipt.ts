@@ -652,7 +652,7 @@ function modernReceiptHtml(
           <td colspan="5">Parts <small>All parts new unless otherwise specified</small></td>
           <td class="num blank-amount-cell"><span class="dollar-sign">$</span></td>
         </tr>
-        ${Array.from({ length: 4 })
+        ${Array.from({ length: 6 })
           .map(
             () =>
               `<tr class="line blank-row">
@@ -669,7 +669,7 @@ function modernReceiptHtml(
           <td colspan="5">Labor &amp; services <small>Body repair, mechanical, paint, frame, diagnostic</small></td>
           <td class="num blank-amount-cell"><span class="dollar-sign">$</span></td>
         </tr>
-        ${Array.from({ length: 4 })
+        ${Array.from({ length: 6 })
           .map(
             () =>
               `<tr class="line blank-row">
