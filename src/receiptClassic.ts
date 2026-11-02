@@ -374,7 +374,7 @@ export function classicReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
         </div>
         <div class="number">
           REPAIR ORDER ${e(order.orderNumber)}
-          <small>Date in: ${e(order.dateIn)} · Promised: ${e(order.datePromised) || '—'}</small>
+          <small>Date in: ${e(order.dateIn)} · Delivery: ${e(order.datePromised) || '—'}</small>
         </div>
       </header>
 

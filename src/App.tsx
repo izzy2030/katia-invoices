@@ -50,7 +50,15 @@ const emptyOrder: WorkOrderInput = {
   concerns: '',
   charges: [
     {
+      kind: 'labor',
+      description: '',
+      amount: '',
+      quantity: '1',
+      unitPrice: '',
+    },
+    {
       kind: 'parts',
+      partNumber: '',
       description: '',
       amount: '',
       quantity: '1',
@@ -70,7 +78,10 @@ const blankOrder = (
   ...emptyOrder,
   dateIn: today(),
   taxRate,
-  charges: [{ ...emptyOrder.charges[0], taxable: defaults.parts }],
+  charges: [
+    { ...emptyOrder.charges[0], taxable: defaults.labor },
+    { ...emptyOrder.charges[1], taxable: defaults.parts },
+  ],
   revisedCharges: [],
   legacy: {
     ...defaultLegacy,
@@ -1342,7 +1353,7 @@ function App() {
                       </div>
                       <div className="repair-date-col promised-date-group">
                         <Field
-                          label="Promised date"
+                          label="Delivery date"
                           name="datePromised"
                           value={form.datePromised}
                           onChange={updateField}
@@ -1487,7 +1498,7 @@ function App() {
                     role="button"
                     tabIndex={0}
                     aria-pressed={dueFilterActive}
-                    title="Click to toggle filter for orders promised today or overdue"
+                    title="Click to toggle filter for orders due for delivery today or overdue"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
@@ -1503,7 +1514,7 @@ function App() {
                     <small>
                       {dueFilterActive
                         ? 'Showing due or overdue (click to reset)'
-                        : 'Promised today or overdue'}
+                        : 'Delivery today or overdue'}
                     </small>
                   </div>
                   <div className="metric-card accent-card">
@@ -1556,7 +1567,7 @@ function App() {
                       </select>
                     </label>
                     <label className="field">
-                      <span>Promised from</span>
+                      <span>Delivery from</span>
                       <input
                         type="date"
                         value={promisedFrom}
@@ -1567,7 +1578,7 @@ function App() {
                       />
                     </label>
                     <label className="field">
-                      <span>Promised through</span>
+                      <span>Delivery through</span>
                       <input
                         type="date"
                         value={promisedTo}
@@ -1583,14 +1594,14 @@ function App() {
                       >
                         <option value="newest">Newest first</option>
                         <option value="promised">
-                          Promised date — earliest first
+                          Delivery date — earliest first
                         </option>
                         <option value="customer">Customer name — A–Z</option>
                       </select>
                     </label>
                     {dueFilterActive && (
                       <span className="active-filter-badge">
-                        ⏱ Promised today or overdue
+                        ⏱ Delivery today or overdue
                         <button
                           type="button"
                           onClick={() => setDueFilterActive(false)}
@@ -1761,7 +1772,7 @@ function App() {
                                 </strong>
                                 <p>
                                   {hasOrderFilters
-                                    ? 'Try changing your search, status, or promised dates.'
+                                    ? 'Try changing your search, status, or delivery dates.'
                                     : 'Create a repair order, then save a PDF to print or share.'}
                                 </p>
                                 {!hasOrderFilters && (

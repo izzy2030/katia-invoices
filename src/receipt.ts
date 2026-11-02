@@ -423,7 +423,7 @@ function modernReceiptHtml(raw: WorkOrder, settings?: TaxSettings) {
           .join('')}
       </div>
       ${fact('Date in', date(order.dateIn))}
-      ${fact('Promised', date(order.datePromised))}
+      ${fact('Delivery', date(order.datePromised))}
       ${fact('Written by', details.writtenBy)}
       ${fact('Technician', details.technician)}
       ${fact('Customer order', details.customerOrderNumber)}

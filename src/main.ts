@@ -1092,7 +1092,7 @@ async function sendOrderEmail(
           </tr>
           ${
             order.datePromised
-              ? `<tr><td style="padding: 6px 0; color: #64748b;">Date Promised:</td><td style="padding: 6px 0; color: #0f172a; text-align: right;">${order.datePromised}</td></tr>`
+              ? `<tr><td style="padding: 6px 0; color: #64748b;">Delivery Date:</td><td style="padding: 6px 0; color: #0f172a; text-align: right;">${order.datePromised}</td></tr>`
               : ''
           }
           <tr style="border-top: 1px solid #cbd5e1;">
@@ -1407,7 +1407,7 @@ async function exportOrdersCsv(): Promise<boolean> {
     'Order Number',
     'Status',
     'Date In',
-    'Date Promised',
+    'Delivery Date',
     'Customer Name',
     'Phone',
     'Address',
