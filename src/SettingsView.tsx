@@ -38,6 +38,7 @@ interface SettingsViewProps {
   onExportCsv?: () => void;
   initialTab?: SettingsTab;
   onPresetsChanged?: () => void;
+  appVersion?: string;
 }
 
 const TABS: SettingsTabItem[] = [
@@ -96,6 +97,7 @@ export default function SettingsView({
   onExportCsv,
   initialTab = 'shop',
   onPresetsChanged,
+  appVersion = '1.1.1',
 }: SettingsViewProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
 
@@ -359,12 +361,13 @@ export default function SettingsView({
               <div className="settings-system-pill-icon">
                 <ShieldCheck size={15} />
               </div>
-              <span>System Configuration</span>
+              <span>System Configuration · v{appVersion}</span>
             </div>
             <h2>App Settings</h2>
             <p className="settings-status-line">
               <span className="settings-live-dot" />
-              Shop &amp; System Configuration · Local SQLite Storage
+              Shop &amp; System Configuration · Local SQLite Storage · v
+              {appVersion} (Auto-updating)
             </p>
           </div>
 

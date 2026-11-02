@@ -268,6 +268,7 @@ function App() {
   const [savedTaxRate, setSavedTaxRate] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [appVersion, setAppVersion] = useState('1.1.1');
   const [emailModalOrder, setEmailModalOrder] = useState<WorkOrder | null>(
     null,
   );
@@ -327,6 +328,12 @@ function App() {
 
   useEffect(() => {
     void window.repairDesk.listWorkOrders().then(setOrders);
+    if (window.repairDesk.getAppVersion) {
+      void window.repairDesk
+        .getAppVersion()
+        .then((ver) => ver && setAppVersion(ver))
+        .catch(() => undefined);
+    }
     void window.repairDesk
       .listCustomerContacts()
       .then(setCustomerContacts)
@@ -1383,6 +1390,14 @@ function App() {
               </span>
               Settings
             </button>
+            <div
+              className="sidebar-version-pill"
+              title="Automatic updates enabled via GitHub Releases"
+            >
+              <span className="status-dot" />
+              <span>v{appVersion}</span>
+              <span className="version-status-tag">Auto-update</span>
+            </div>
           </div>
         </aside>
 
@@ -1532,6 +1547,7 @@ function App() {
                 onImportBackup={(mode) => importBackup(mode)}
                 onExportCsv={() => void exportCsv()}
                 initialTab={settingsTab}
+                appVersion={appVersion}
               />
             ) : customersOpen ? (
               <CustomersView
@@ -2230,7 +2246,7 @@ function App() {
               </>
             )}
             <footer className="page-footer">
-              <span>© 2026 Katia Auto Sales & Repairs</span>
+              <span>© 2026 Katia Auto Sales & Repairs · v{appVersion}</span>
               <span>
                 Made for the work that keeps you moving <b>✳</b>
               </span>

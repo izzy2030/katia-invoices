@@ -107,6 +107,7 @@ interface Window {
       personalNote?: string;
     }) => Promise<{ success: boolean; messageId: string; senderEmail: string }>;
     platform: string;
+    getAppVersion?: () => Promise<string>;
     setTitleBarOverlay: (options: {
       color: string;
       symbolColor: string;

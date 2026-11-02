@@ -2139,6 +2139,7 @@ app
         },
       ) => handleSendGmailOrderEmail(options),
     );
+    ipcMain.handle('app:version', () => app.getVersion());
     createWindow();
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();

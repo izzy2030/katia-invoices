@@ -85,6 +85,7 @@ contextBridge.exposeInMainWorld('repairDesk', {
     personalNote?: string;
   }) => ipcRenderer.invoke('gmail:send-order', options),
   platform: process.platform,
+  getAppVersion: () => ipcRenderer.invoke('app:version'),
   setTitleBarOverlay: (options: {
     color: string;
     symbolColor: string;
