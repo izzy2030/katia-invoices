@@ -79,7 +79,7 @@ export function classicReceiptHtml(
     );
   }
 
-  const partsTable = `<section class="sec-parts"><h2>Parts (all parts new unless otherwise specified)</h2><table class="lines parts-lines"><thead><tr><th style="width:7%">Qty</th><th style="width:23%">Part no.</th><th>Description</th><th style="width:13%">Unit</th><th style="width:8%">Tax</th><th style="width:16%">Amount</th></tr></thead><tbody>${partsHtmlRows.join('')}</tbody><tfoot><tr class="table-subtotal"><td colspan="5">TOTAL PARTS</td><td class="amount">${isBlank ? '&nbsp;' : money(totals.parts)}</td></tr></tfoot></table></section>`;
+  const partsTable = `<section class="sec-parts"><h2>Parts (all parts new unless otherwise specified)</h2><table class="lines parts-lines"><thead><tr><th style="width:7%">Qty</th><th style="width:23%">Part no.</th><th>Description</th><th style="width:13%">Unit</th><th style="width:8%">Tax</th><th style="width:16%">Amount</th></tr></thead><tbody>${partsHtmlRows.join('')}</tbody><tfoot><tr class="table-subtotal"><td colspan="5">TOTAL PARTS</td><td class="amount ${isBlank ? 'blank-amount-cell' : ''}">${isBlank ? '$' : money(totals.parts)}</td></tr></tfoot></table></section>`;
 
   const laborTable = `<section class="sec-labor"><h2>Labor / services / other charges</h2><table class="lines labor-lines"><thead><tr><th style="width:7%">Qty</th><th style="width:16%">Part no.</th><th>Description</th><th style="width:13%">Unit</th><th style="width:8%">Tax</th><th style="width:16%">Amount</th></tr></thead><tbody>${laborHtmlRows.join('')}</tbody></table></section>`;
 

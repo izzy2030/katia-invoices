@@ -315,10 +315,26 @@ function modernReceiptHtml(
     margin-top: 6pt;
   }
   .blank-lines-table tbody tr {
-    height: 16pt;
+    height: 15pt;
   }
   .blank-lines-table tbody td {
     border-bottom: 0.5pt solid #cbd5e1;
+  }
+  .blank-group-row td {
+    border-top: 1pt solid #0f172a !important;
+    font-size: 8pt !important;
+    font-weight: 800 !important;
+    padding: 3pt 0 2pt !important;
+    color: #0f172a !important;
+  }
+  .blank-group-row small {
+    color: #64748b;
+    font-size: 6.8pt;
+    font-weight: 500;
+    margin-left: 6pt;
+  }
+  .blank-group-row .blank-amount-cell {
+    border-bottom: 0.5pt solid #cbd5e1 !important;
   }
   .blank-facts {
     display: grid !important;
@@ -623,16 +639,37 @@ function modernReceiptHtml(
     <table class="lines blank-lines-table">
       <thead>
         <tr>
-          <th class="qty" style="width: 32pt;">Qty</th>
-          <th style="width: 65pt;">Part No.</th>
-          <th>Work Description / Replacement Parts</th>
-          <th class="num" style="width: 60pt;">Unit Price</th>
+          <th class="qty" style="width: 36pt;">Qty / Hrs</th>
+          <th style="width: 70pt;">Part # / Code</th>
+          <th>Description of Parts &amp; Labor Services</th>
+          <th class="num" style="width: 65pt;">Price / Rate</th>
           <th class="tax" style="width: 30pt;">Tax</th>
           <th class="num" style="width: 65pt;">Amount</th>
         </tr>
       </thead>
       <tbody>
-        ${Array.from({ length: 7 })
+        <tr class="group blank-group-row">
+          <td colspan="5">Parts <small>All parts new unless otherwise specified</small></td>
+          <td class="num blank-amount-cell"><span class="dollar-sign">$</span></td>
+        </tr>
+        ${Array.from({ length: 4 })
+          .map(
+            () =>
+              `<tr class="line blank-row">
+                <td class="qty">&nbsp;</td>
+                <td></td>
+                <td></td>
+                <td class="num"></td>
+                <td class="tax"></td>
+                <td class="num amount"></td>
+              </tr>`,
+          )
+          .join('')}
+        <tr class="group blank-group-row">
+          <td colspan="5">Labor &amp; services <small>Body repair, mechanical, paint, frame, diagnostic</small></td>
+          <td class="num blank-amount-cell"><span class="dollar-sign">$</span></td>
+        </tr>
+        ${Array.from({ length: 4 })
           .map(
             () =>
               `<tr class="line blank-row">

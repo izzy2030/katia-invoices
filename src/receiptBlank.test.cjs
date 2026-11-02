@@ -71,8 +71,16 @@ assert.ok(
   !modernHtml.includes('$ &nbsp;&nbsp;'),
   'Modern blank receipt must not push dollar sign with trailing &nbsp; spaces',
 );
+assert.ok(
+  modernHtml.includes('Parts <small>All parts new'),
+  'Modern blank receipt must contain Parts group',
+);
+assert.ok(
+  modernHtml.includes('Labor &amp; services'),
+  'Modern blank receipt must contain Labor & services group',
+);
 console.log(
-  '✓ Modern blank receipt verified: zero $0.00 occurrences, write lines present, dollar signs on left',
+  '✓ Modern blank receipt verified: zero $0.00 occurrences, write lines present, dollar signs on left, both parts and labor groups present',
 );
 
 // 2. Classic blank template
