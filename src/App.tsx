@@ -7,7 +7,7 @@ import KatiaLogo from './KatiaLogo';
 import LegacyFields from './LegacyFields';
 import SettingsView, { type SettingsTab } from './SettingsView';
 import WindowTitleBar from './WindowTitleBar';
-import { Printer, Mail, Eye } from 'lucide-react';
+import { Printer, Mail, Eye, Settings } from 'lucide-react';
 import {
   customerProfiles,
   orderCustomerKey,
@@ -1371,29 +1371,17 @@ function App() {
             <span className="nav-icon">☺</span> Customers
             <span className="nav-count">{customers.length}</span>
           </button>
-          <button
-            className={`nav-item ${settingsOpen ? 'active' : ''}`}
-            onClick={openTaxSettings}
-          >
-            <span className="nav-icon">⚙</span> Tax & settings
-          </button>
           <div className="sidebar-bottom">
-            <div className="shop-card">
-              <span className="status-dot" />
-              <div>
-                <strong>Local workspace</strong>
-                <small>Saved on this computer</small>
-              </div>
-            </div>
-            <div className="profile">
-              <div className="avatar" title="Katia Auto Sales & Repairs">
-                <KatiaLogo size={28} color="#ffffff" />
-              </div>
-              <div>
-                <strong>Katia Auto Sales</strong>
-                <small>Aurora, Illinois</small>
-              </div>
-            </div>
+            <button
+              className={`nav-item ${settingsOpen ? 'active' : ''}`}
+              onClick={openTaxSettings}
+              title="Settings & System Configuration"
+            >
+              <span className="nav-icon">
+                <Settings size={18} />
+              </span>
+              Settings
+            </button>
           </div>
         </aside>
 
