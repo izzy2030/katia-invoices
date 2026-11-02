@@ -1,6 +1,7 @@
 import ChargeRows from './ChargeRows';
 import CustomersView from './Customers';
 import CustomerAutofillSearch from './CustomerAutofillSearch';
+import WorkOrderCharges from './WorkOrderCharges';
 import KatiaLogo from './KatiaLogo';
 import LegacyFields from './LegacyFields';
 import SettingsView, { type SettingsTab } from './SettingsView';
@@ -1380,23 +1381,22 @@ function App() {
                         </div>
                       </div>
                       <label className="field full-width">
-                        <span>Customer concerns / work requested</span>
+                        <span>Customer concerns / intake notes</span>
                         <textarea
                           value={form.concerns}
                           onChange={(event) =>
                             updateField('concerns', event.target.value)
                           }
-                          placeholder="Describe the damage or requested body work…"
-                          rows={5}
+                          placeholder="General damage summary or customer notes (e.g. Front-end collision, replace bumper & check sensors)…"
+                          rows={2}
                         />
                       </label>
-                      <ChargeRows
+                      <WorkOrderCharges
                         charges={form.charges}
                         defaults={shopDefaults}
                         onChange={(charges) =>
                           setForm((current) => ({ ...current, charges }))
                         }
-                        heading="Repair line items"
                       />
                       <Field
                         label="Sales tax rate (%)"
