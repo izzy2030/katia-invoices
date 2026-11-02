@@ -459,15 +459,6 @@ function App() {
     setForm((current) => ({ ...current, [name]: value }));
   };
 
-  const setQuickPromisedDate = (days: number) => {
-    const baseDate = form.dateIn
-      ? new Date(`${form.dateIn}T12:00:00`)
-      : new Date();
-    baseDate.setDate(baseDate.getDate() + days);
-    const formatted = `${baseDate.getFullYear()}-${String(baseDate.getMonth() + 1).padStart(2, '0')}-${String(baseDate.getDate()).padStart(2, '0')}`;
-    updateField('datePromised', formatted);
-  };
-
   function startNewOrder() {
     setNotice('');
     setSettingsOpen(false);
@@ -1351,7 +1342,7 @@ function App() {
                           type="date"
                         />
                       </div>
-                      <div className="repair-date-col promised-date-group">
+                      <div className="repair-date-col">
                         <Field
                           label="Delivery date"
                           name="datePromised"
@@ -1359,40 +1350,6 @@ function App() {
                           onChange={updateField}
                           type="date"
                         />
-                        <div className="quick-date-row">
-                          <button
-                            type="button"
-                            className="quick-date-btn"
-                            onClick={() => setQuickPromisedDate(0)}
-                            title="Same day as Date in"
-                          >
-                            Same day
-                          </button>
-                          <button
-                            type="button"
-                            className="quick-date-btn"
-                            onClick={() => setQuickPromisedDate(1)}
-                            title="Tomorrow"
-                          >
-                            Tomorrow
-                          </button>
-                          <button
-                            type="button"
-                            className="quick-date-btn"
-                            onClick={() => setQuickPromisedDate(3)}
-                            title="+3 days"
-                          >
-                            +3 days
-                          </button>
-                          <button
-                            type="button"
-                            className="quick-date-btn"
-                            onClick={() => setQuickPromisedDate(7)}
-                            title="+1 week"
-                          >
-                            +1 week
-                          </button>
-                        </div>
                       </div>
                       <div className="repair-notes-col">
                         <ExpandableCustomerNotes

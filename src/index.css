@@ -1783,7 +1783,7 @@ tbody tr:hover {
 /* Repair Top Grid (Dates & Expandable Notes) */
 .repair-top-grid {
   display: grid;
-  grid-template-columns: minmax(180px, 220px) minmax(210px, 240px) minmax(
+  grid-template-columns: minmax(160px, 200px) minmax(160px, 200px) minmax(
       280px,
       1fr
     );
@@ -2402,40 +2402,6 @@ button:focus-visible {
 .order-workspace .field textarea {
   height: 76px;
   min-height: 76px;
-}
-
-.promised-date-group {
-  display: flex;
-  flex-direction: column;
-}
-
-.quick-date-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 6px;
-}
-
-.quick-date-btn {
-  background: var(--surface-subtle);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  color: var(--ink-secondary);
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 8px;
-  transition: all 0.14s ease;
-}
-
-.quick-date-btn:hover {
-  background: var(--accent-soft);
-  border-color: var(--accent-border);
-  color: var(--accent-strong);
-}
-
-[data-theme='abyssal'] .quick-date-btn:hover {
-  color: var(--accent);
 }
 
 .order-workspace .charge-row input:not([type='checkbox']),
