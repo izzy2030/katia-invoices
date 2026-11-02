@@ -329,7 +329,7 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [notice, setNoticeText] = useState('');
   const [noticeIsError, setNoticeIsError] = useState(false);
-  const [appVersion, setAppVersion] = useState('1.1.2');
+  const [appVersion, setAppVersion] = useState('1.1.3');
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
   const [emailSending, setEmailSending] = useState(false);
   const [emailModalError, setEmailModalError] = useState('');

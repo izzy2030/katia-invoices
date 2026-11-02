@@ -56,7 +56,14 @@ import {
 } from './backupService';
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import path from 'node:path';
-import { existsSync } from 'node:fs';
+import {
+  existsSync,
+  copyFileSync,
+  mkdirSync,
+  readdirSync,
+  statSync,
+  unlinkSync,
+} from 'node:fs';
 import fs from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
@@ -66,14 +73,155 @@ import { updateElectronApp, UpdateSourceType } from 'update-electron-app';
 let database: DatabaseSync;
 let databaseFilePath = '';
 
+function autoBackupDatabase(dbPath: string) {
+  try {
+    if (!existsSync(dbPath)) return;
+    const backupDir = path.join(app.getPath('userData'), 'auto_backups');
+    if (!existsSync(backupDir)) {
+      mkdirSync(backupDir, { recursive: true });
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const todayBackup = path.join(backupDir, `katia-backup-${today}.sqlite`);
+    if (!existsSync(todayBackup)) {
+      copyFileSync(dbPath, todayBackup);
+      const files = readdirSync(backupDir);
+      for (const f of files) {
+        if (f.startsWith('katia-backup-') && f.endsWith('.sqlite')) {
+          const filePath = path.join(backupDir, f);
+          const stat = statSync(filePath);
+          if (Date.now() - stat.mtimeMs > 14 * 24 * 60 * 60 * 1000) {
+            unlinkSync(filePath);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Auto-backup skipped:', err);
+  }
+}
+
+function autoMigrateDevDatabase(db: DatabaseSync, prodPath: string) {
+  try {
+    const devPath = path.join(
+      app.getPath('userData'),
+      'katia-body-shop-dev.sqlite',
+    );
+    if (prodPath === devPath || !existsSync(devPath)) return;
+
+    const prodCount = (
+      db.prepare('SELECT COUNT(*) as count FROM work_orders').get() as {
+        count: number;
+      }
+    ).count;
+
+    if (prodCount === 0) {
+      const devDb = new DatabaseSync(devPath);
+      const devOrders = devDb
+        .prepare('SELECT * FROM work_orders')
+        .all() as Array<{
+        id: string;
+        order_number: string;
+        customer_name: string;
+        vehicle: string;
+        status: string;
+        data_json: string;
+        created_at: string;
+      }>;
+
+      if (devOrders.length > 0) {
+        db.exec('BEGIN IMMEDIATE;');
+        try {
+          const insertOrder = db.prepare(`
+            INSERT INTO work_orders (id, order_number, customer_name, vehicle, status, data_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              order_number = excluded.order_number,
+              customer_name = excluded.customer_name,
+              vehicle = excluded.vehicle,
+              status = excluded.status,
+              data_json = excluded.data_json,
+              created_at = excluded.created_at
+          `);
+          for (const o of devOrders) {
+            insertOrder.run(
+              o.id,
+              o.order_number,
+              o.customer_name,
+              o.vehicle,
+              o.status,
+              o.data_json,
+              o.created_at,
+            );
+          }
+
+          const devSettings = devDb
+            .prepare('SELECT * FROM app_settings')
+            .all() as Array<{
+            key: string;
+            value: string;
+          }>;
+          const insertSetting = db.prepare(`
+            INSERT INTO app_settings (key, value) VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+          `);
+          for (const s of devSettings) {
+            insertSetting.run(s.key, s.value);
+          }
+
+          const devContacts = devDb
+            .prepare('SELECT * FROM customer_contacts')
+            .all() as Array<{
+            customer_key: string;
+            phone: string;
+            address: string;
+            name: string;
+            email?: string;
+          }>;
+          const insertContact = db.prepare(`
+            INSERT INTO customer_contacts (customer_key, phone, address, name, email)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(customer_key) DO UPDATE SET
+              phone = excluded.phone,
+              address = excluded.address,
+              name = excluded.name,
+              email = excluded.email
+          `);
+          for (const c of devContacts) {
+            insertContact.run(
+              c.customer_key,
+              c.phone,
+              c.address,
+              c.name,
+              c.email ?? '',
+            );
+          }
+
+          db.exec('COMMIT;');
+          console.log(
+            `Auto-migrated ${devOrders.length} orders from dev database to production.`,
+          );
+        } catch (migErr) {
+          db.exec('ROLLBACK;');
+          console.warn('Auto-migration failed:', migErr);
+        }
+      }
+      devDb.close();
+    }
+  } catch (err) {
+    console.warn('Dev database auto-migration check skipped:', err);
+  }
+}
+
 function initializeDatabase() {
   const fileName = app.isPackaged
     ? 'katia-body-shop.sqlite'
     : 'katia-body-shop-dev.sqlite';
   databaseFilePath = path.join(app.getPath('userData'), fileName);
+  autoBackupDatabase(databaseFilePath);
   database = new DatabaseSync(databaseFilePath);
   database.exec('PRAGMA journal_mode = WAL;');
   ensureBackupSchema(database);
+  autoMigrateDevDatabase(database, databaseFilePath);
 
   try {
     const count = (
