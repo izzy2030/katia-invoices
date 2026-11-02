@@ -1,6 +1,7 @@
 import ChargeRows from './ChargeRows';
 import CustomersView from './Customers';
 import CustomerAutofillSearch from './CustomerAutofillSearch';
+import ExpandableCustomerNotes from './ExpandableCustomerNotes';
 import WorkOrderCharges from './WorkOrderCharges';
 import KatiaLogo from './KatiaLogo';
 import LegacyFields from './LegacyFields';
@@ -1329,15 +1330,17 @@ function App() {
                         <p>Record the issue and the expected timeline.</p>
                       </div>
                     </div>
-                    <div className="form-grid">
-                      <Field
-                        label="Date in"
-                        name="dateIn"
-                        value={form.dateIn}
-                        onChange={updateField}
-                        type="date"
-                      />
-                      <div className="promised-date-group">
+                    <div className="repair-top-grid">
+                      <div className="repair-date-col">
+                        <Field
+                          label="Date in"
+                          name="dateIn"
+                          value={form.dateIn}
+                          onChange={updateField}
+                          type="date"
+                        />
+                      </div>
+                      <div className="repair-date-col promised-date-group">
                         <Field
                           label="Promised date"
                           name="datePromised"
@@ -1380,62 +1383,57 @@ function App() {
                           </button>
                         </div>
                       </div>
-                      <label className="field full-width">
-                        <span>Customer concerns / intake notes</span>
-                        <textarea
+                      <div className="repair-notes-col">
+                        <ExpandableCustomerNotes
                           value={form.concerns}
-                          onChange={(event) =>
-                            updateField('concerns', event.target.value)
-                          }
-                          placeholder="General damage summary or customer notes (e.g. Front-end collision, replace bumper & check sensors)…"
-                          rows={2}
+                          onChange={(val) => updateField('concerns', val)}
                         />
-                      </label>
-                      <WorkOrderCharges
-                        charges={form.charges}
-                        defaults={shopDefaults}
-                        onChange={(charges) =>
-                          setForm((current) => ({ ...current, charges }))
-                        }
-                      />
-                      <Field
-                        label="Sales tax rate (%)"
-                        name="taxRate"
-                        value={form.taxRate ?? ''}
-                        onChange={updateField}
-                        placeholder="8.25"
-                        type="number"
-                      />
-                      <div className="cost-summary">
-                        {(
-                          [
-                            ['parts', 'Parts'],
-                            ['labor', 'Labor'],
-                            ['sublet', 'Sublet'],
-                            ['fluids', 'Gas, oil & grease'],
-                            ['disposal', 'EPA / waste disposal'],
-                            ['other', 'Other'],
-                          ] as const
-                        ).map(([key, label]) => (
-                          <span key={key}>
-                            {label}
-                            <strong>${totals[key].toFixed(2)}</strong>
-                          </span>
-                        ))}
-                        <span>
-                          Taxable subtotal
-                          <strong>${totals.taxable.toFixed(2)}</strong>
-                        </span>
-                        <span>
-                          Tax
-                          {form.taxRate ? ` (${form.taxRate}%)` : ''}
-                          <strong>${totals.tax.toFixed(2)}</strong>
-                        </span>
                       </div>
-                      <div className="total-preview">
-                        <span>Estimated total</span>
-                        <strong>${total.toFixed(2)}</strong>
-                      </div>
+                    </div>
+                    <WorkOrderCharges
+                      charges={form.charges}
+                      defaults={shopDefaults}
+                      onChange={(charges) =>
+                        setForm((current) => ({ ...current, charges }))
+                      }
+                    />
+                    <Field
+                      label="Sales tax rate (%)"
+                      name="taxRate"
+                      value={form.taxRate ?? ''}
+                      onChange={updateField}
+                      placeholder="8.25"
+                      type="number"
+                    />
+                    <div className="cost-summary">
+                      {(
+                        [
+                          ['parts', 'Parts'],
+                          ['labor', 'Labor'],
+                          ['sublet', 'Sublet'],
+                          ['fluids', 'Gas, oil & grease'],
+                          ['disposal', 'EPA / waste disposal'],
+                          ['other', 'Other'],
+                        ] as const
+                      ).map(([key, label]) => (
+                        <span key={key}>
+                          {label}
+                          <strong>${totals[key].toFixed(2)}</strong>
+                        </span>
+                      ))}
+                      <span>
+                        Taxable subtotal
+                        <strong>${totals.taxable.toFixed(2)}</strong>
+                      </span>
+                      <span>
+                        Tax
+                        {form.taxRate ? ` (${form.taxRate}%)` : ''}
+                        <strong>${totals.tax.toFixed(2)}</strong>
+                      </span>
+                    </div>
+                    <div className="total-preview">
+                      <span>Estimated total</span>
+                      <strong>${total.toFixed(2)}</strong>
                     </div>
                     <div className="info-note">
                       <span>ⓘ</span> Every line is quantity × unit price. Sales
