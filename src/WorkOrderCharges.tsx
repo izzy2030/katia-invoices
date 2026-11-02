@@ -448,66 +448,57 @@ export default function WorkOrderCharges({
               {quickPickerSection === 'labor' && (
                 <div className="slash-presets-palette">
                   <div className="palette-header">
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-amber-700 dark:text-amber-400">
-                      <Sparkles size={14} />
+                    <div className="palette-header-title">
+                      <Sparkles size={13} />
                       <span>Body Shop Labor Presets</span>
                     </div>
-                    <span className="text-[10px] text-gray-400">
+                    <span className="palette-header-hint">
                       Click to add line
                     </span>
                   </div>
-                  <div className="p-2 border-b border-gray-100 dark:border-gray-800">
-                    <div className="relative">
-                      <Search
-                        size={13}
-                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
-                      />
-                      <input
-                        type="text"
-                        autoFocus
-                        placeholder="Search labor operations or shortcuts…"
-                        className="w-full pl-8 pr-2.5 py-1 text-xs rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                        value={quickSearch}
-                        onChange={(e) => setQuickSearch(e.target.value)}
-                      />
-                    </div>
+                  <div className="palette-search-wrap">
+                    <Search size={13} className="palette-search-icon" />
+                    <input
+                      type="text"
+                      autoFocus
+                      placeholder="Search labor operations or shortcuts…"
+                      className="palette-search-input"
+                      value={quickSearch}
+                      onChange={(e) => setQuickSearch(e.target.value)}
+                    />
                   </div>
-                  <div className="palette-list max-h-60 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
+                  <div className="palette-list">
                     {quickPickerList.length === 0 ? (
-                      <div className="p-4 text-center text-xs text-gray-400">
-                        No presets found.
-                      </div>
+                      <div className="palette-empty">No presets found.</div>
                     ) : (
                       quickPickerList.map((p) => (
                         <button
                           key={p.id}
                           type="button"
-                          className="w-full text-left p-2.5 hover:bg-amber-50/70 dark:hover:bg-amber-950/30 transition-colors flex items-center justify-between gap-2"
+                          className="palette-item"
                           onClick={() => handleInsertPreset('labor', p)}
                         >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200">
+                          <div className="palette-item-main">
+                            <div className="palette-item-header">
+                              <span className="palette-shortcut-badge">
                                 /{p.shortcut}
                               </span>
-                              <strong className="text-xs text-gray-900 dark:text-gray-100">
+                              <strong className="palette-item-name">
                                 {p.name}
                               </strong>
                               {p.partNumber && (
-                                <span className="text-[10px] font-mono text-gray-500 bg-gray-100 dark:bg-gray-800 px-1 rounded">
+                                <span className="palette-item-code">
                                   {p.partNumber}
                                 </span>
                               )}
                             </div>
-                            <p className="text-[11px] text-gray-500 truncate mt-0.5">
-                              {p.description}
-                            </p>
+                            <p className="palette-item-desc">{p.description}</p>
                           </div>
-                          <div className="text-right shrink-0">
-                            <div className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                          <div className="palette-item-meta">
+                            <div className="palette-item-price">
                               ${p.defaultPrice.toFixed(2)}
                             </div>
-                            <div className="text-[10px] text-gray-400">
+                            <div className="palette-item-qty">
                               {p.defaultQuantity ?? 1} hrs
                             </div>
                           </div>
@@ -557,7 +548,15 @@ export default function WorkOrderCharges({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  className="empty-card-action bg-amber-500 text-white border-none hover:bg-amber-600 flex items-center gap-1.5"
+                  className="empty-card-action"
+                  style={{
+                    background: 'var(--accent)',
+                    color: '#ffffff',
+                    border: '1px solid var(--accent)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
                   onClick={() => {
                     setQuickPickerSection('labor');
                     setQuickSearch('');
@@ -630,23 +629,23 @@ export default function WorkOrderCharges({
                         role="listbox"
                       >
                         <div className="palette-header">
-                          <div className="flex items-center gap-1.5 font-bold text-xs text-amber-700 dark:text-amber-400">
+                          <div className="palette-header-title">
                             <Sparkles size={13} />
                             <span>Body Shop Presets</span>
                             {activeSlash.query && (
-                              <span className="font-mono text-[10px] px-1 py-0.2 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
+                              <span className="palette-shortcut-badge">
                                 /{activeSlash.query}
                               </span>
                             )}
                           </div>
-                          <span className="text-[10px] text-gray-400">
+                          <span className="palette-header-hint">
                             ↑↓ to navigate · Enter to select · Esc to close
                           </span>
                         </div>
 
-                        <div className="palette-list max-h-56 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
+                        <div className="palette-list">
                           {activeSlashMatches.length === 0 ? (
-                            <div className="p-3 text-center text-xs text-gray-400">
+                            <div className="palette-empty">
                               No presets matching &ldquo;/{activeSlash.query}
                               &rdquo;. Keep typing or press Esc.
                             </div>
@@ -663,37 +662,33 @@ export default function WorkOrderCharges({
                                     applyPreset('labor', index, preset);
                                   }}
                                   onMouseEnter={() => setHighlightedIndex(pIdx)}
-                                  className={`p-2.5 cursor-pointer flex items-center justify-between gap-2 text-left transition-colors ${
-                                    isSelected
-                                      ? 'bg-amber-500/15 dark:bg-amber-500/25 border-l-4 border-amber-500 pl-2'
-                                      : 'hover:bg-gray-50 dark:hover:bg-gray-800/40'
-                                  }`}
+                                  className={`palette-item ${isSelected ? 'active' : ''}`}
                                 >
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200">
+                                  <div className="palette-item-main">
+                                    <div className="palette-item-header">
+                                      <span className="palette-shortcut-badge">
                                         /{preset.shortcut}
                                       </span>
-                                      <strong className="text-xs text-gray-900 dark:text-gray-100">
+                                      <strong className="palette-item-name">
                                         {preset.name}
                                       </strong>
                                       {preset.partNumber && (
-                                        <span className="text-[10px] font-mono text-gray-500 bg-gray-100 dark:bg-gray-800 px-1 rounded">
+                                        <span className="palette-item-code">
                                           {preset.partNumber}
                                         </span>
                                       )}
                                     </div>
-                                    <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                                    <p className="palette-item-desc">
                                       {preset.description}
                                     </p>
                                   </div>
 
-                                  <div className="text-right shrink-0">
-                                    <div className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                                  <div className="palette-item-meta">
+                                    <div className="palette-item-price">
                                       ${preset.defaultPrice.toFixed(2)}
                                       {preset.category === 'labor' ? '/hr' : ''}
                                     </div>
-                                    <div className="text-[10px] text-gray-400">
+                                    <div className="palette-item-qty">
                                       {preset.defaultQuantity ?? 1}{' '}
                                       {preset.category === 'labor'
                                         ? 'hrs'
@@ -809,66 +804,57 @@ export default function WorkOrderCharges({
               {quickPickerSection === 'parts' && (
                 <div className="slash-presets-palette">
                   <div className="palette-header">
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-amber-700 dark:text-amber-400">
-                      <Sparkles size={14} />
+                    <div className="palette-header-title">
+                      <Sparkles size={13} />
                       <span>Body Shop Parts &amp; Materials Presets</span>
                     </div>
-                    <span className="text-[10px] text-gray-400">
+                    <span className="palette-header-hint">
                       Click to add line
                     </span>
                   </div>
-                  <div className="p-2 border-b border-gray-100 dark:border-gray-800">
-                    <div className="relative">
-                      <Search
-                        size={13}
-                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
-                      />
-                      <input
-                        type="text"
-                        autoFocus
-                        placeholder="Search parts, supplies or shortcuts…"
-                        className="w-full pl-8 pr-2.5 py-1 text-xs rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                        value={quickSearch}
-                        onChange={(e) => setQuickSearch(e.target.value)}
-                      />
-                    </div>
+                  <div className="palette-search-wrap">
+                    <Search size={13} className="palette-search-icon" />
+                    <input
+                      type="text"
+                      autoFocus
+                      placeholder="Search parts, supplies or shortcuts…"
+                      className="palette-search-input"
+                      value={quickSearch}
+                      onChange={(e) => setQuickSearch(e.target.value)}
+                    />
                   </div>
-                  <div className="palette-list max-h-60 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
+                  <div className="palette-list">
                     {quickPickerList.length === 0 ? (
-                      <div className="p-4 text-center text-xs text-gray-400">
-                        No presets found.
-                      </div>
+                      <div className="palette-empty">No presets found.</div>
                     ) : (
                       quickPickerList.map((p) => (
                         <button
                           key={p.id}
                           type="button"
-                          className="w-full text-left p-2.5 hover:bg-amber-50/70 dark:hover:bg-amber-950/30 transition-colors flex items-center justify-between gap-2"
+                          className="palette-item"
                           onClick={() => handleInsertPreset('parts', p)}
                         >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200">
+                          <div className="palette-item-main">
+                            <div className="palette-item-header">
+                              <span className="palette-shortcut-badge">
                                 /{p.shortcut}
                               </span>
-                              <strong className="text-xs text-gray-900 dark:text-gray-100">
+                              <strong className="palette-item-name">
                                 {p.name}
                               </strong>
                               {p.partNumber && (
-                                <span className="text-[10px] font-mono text-gray-500 bg-gray-100 dark:bg-gray-800 px-1 rounded">
+                                <span className="palette-item-code">
                                   {p.partNumber}
                                 </span>
                               )}
                             </div>
-                            <p className="text-[11px] text-gray-500 truncate mt-0.5">
-                              {p.description}
-                            </p>
+                            <p className="palette-item-desc">{p.description}</p>
                           </div>
-                          <div className="text-right shrink-0">
-                            <div className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                          <div className="palette-item-meta">
+                            <div className="palette-item-price">
                               ${p.defaultPrice.toFixed(2)}
                             </div>
-                            <div className="text-[10px] text-gray-400">
+                            <div className="palette-item-qty">
                               {p.defaultQuantity ?? 1} qty
                             </div>
                           </div>
@@ -919,7 +905,15 @@ export default function WorkOrderCharges({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  className="empty-card-action bg-amber-500 text-white border-none hover:bg-amber-600 flex items-center gap-1.5"
+                  className="empty-card-action"
+                  style={{
+                    background: 'var(--accent)',
+                    color: '#ffffff',
+                    border: '1px solid var(--accent)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
                   onClick={() => {
                     setQuickPickerSection('parts');
                     setQuickSearch('');
@@ -988,23 +982,23 @@ export default function WorkOrderCharges({
                         role="listbox"
                       >
                         <div className="palette-header">
-                          <div className="flex items-center gap-1.5 font-bold text-xs text-amber-700 dark:text-amber-400">
+                          <div className="palette-header-title">
                             <Sparkles size={13} />
                             <span>Body Shop Presets</span>
                             {activeSlash.query && (
-                              <span className="font-mono text-[10px] px-1 py-0.2 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
+                              <span className="palette-shortcut-badge">
                                 /{activeSlash.query}
                               </span>
                             )}
                           </div>
-                          <span className="text-[10px] text-gray-400">
+                          <span className="palette-header-hint">
                             ↑↓ to navigate · Enter to select · Esc to close
                           </span>
                         </div>
 
-                        <div className="palette-list max-h-56 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
+                        <div className="palette-list">
                           {activeSlashMatches.length === 0 ? (
-                            <div className="p-3 text-center text-xs text-gray-400">
+                            <div className="palette-empty">
                               No presets matching &ldquo;/{activeSlash.query}
                               &rdquo;. Keep typing or press Esc.
                             </div>
@@ -1021,36 +1015,32 @@ export default function WorkOrderCharges({
                                     applyPreset('parts', index, preset);
                                   }}
                                   onMouseEnter={() => setHighlightedIndex(pIdx)}
-                                  className={`p-2.5 cursor-pointer flex items-center justify-between gap-2 text-left transition-colors ${
-                                    isSelected
-                                      ? 'bg-amber-500/15 dark:bg-amber-500/25 border-l-4 border-amber-500 pl-2'
-                                      : 'hover:bg-gray-50 dark:hover:bg-gray-800/40'
-                                  }`}
+                                  className={`palette-item ${isSelected ? 'active' : ''}`}
                                 >
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200">
+                                  <div className="palette-item-main">
+                                    <div className="palette-item-header">
+                                      <span className="palette-shortcut-badge">
                                         /{preset.shortcut}
                                       </span>
-                                      <strong className="text-xs text-gray-900 dark:text-gray-100">
+                                      <strong className="palette-item-name">
                                         {preset.name}
                                       </strong>
                                       {preset.partNumber && (
-                                        <span className="text-[10px] font-mono text-gray-500 bg-gray-100 dark:bg-gray-800 px-1 rounded">
+                                        <span className="palette-item-code">
                                           {preset.partNumber}
                                         </span>
                                       )}
                                     </div>
-                                    <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                                    <p className="palette-item-desc">
                                       {preset.description}
                                     </p>
                                   </div>
 
-                                  <div className="text-right shrink-0">
-                                    <div className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                                  <div className="palette-item-meta">
+                                    <div className="palette-item-price">
                                       ${preset.defaultPrice.toFixed(2)}
                                     </div>
-                                    <div className="text-[10px] text-gray-400">
+                                    <div className="palette-item-qty">
                                       {preset.defaultQuantity ?? 1} qty
                                     </div>
                                   </div>
