@@ -27,6 +27,8 @@ contextBridge.exposeInMainWorld('repairDesk', {
     ipcRenderer.invoke('work-orders:set-status', id, status),
   saveWorkOrderPdf: (order: WorkOrder) =>
     ipcRenderer.invoke('work-orders:print-pdf', order),
+  printOrder: (order: WorkOrder) =>
+    ipcRenderer.invoke('work-orders:print', order),
   openPath: (targetPath: string) =>
     ipcRenderer.invoke('shell:open-path', targetPath),
   exportBackupJson: () => ipcRenderer.invoke('backup:export-json'),

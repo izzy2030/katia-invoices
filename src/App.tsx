@@ -7,6 +7,7 @@ import KatiaLogo from './KatiaLogo';
 import LegacyFields from './LegacyFields';
 import SettingsView, { type SettingsTab } from './SettingsView';
 import WindowTitleBar from './WindowTitleBar';
+import { Printer, Mail } from 'lucide-react';
 import {
   customerProfiles,
   orderCustomerKey,
@@ -251,6 +252,13 @@ function App() {
   const [emailModalError, setEmailModalError] = useState('');
   const [showAddress, setShowAddress] = useState(false);
   const [switchVehicleOpen, setSwitchVehicleOpen] = useState(false);
+  const [postSaveEmailPrompt, setPostSaveEmailPrompt] = useState<{
+    order: WorkOrder;
+    provider: 'gmail' | 'resend' | null;
+    senderDescription: string;
+  } | null>(null);
+  const [postSaveRecipient, setPostSaveRecipient] = useState('');
+  const [postSaveEmailError, setPostSaveEmailError] = useState('');
 
   useEffect(() => {
     void window.repairDesk
@@ -778,6 +786,101 @@ function App() {
     }
   }
 
+  async function checkEmailConfigured(): Promise<{
+    configured: boolean;
+    provider: 'gmail' | 'resend' | null;
+    senderDescription: string;
+  }> {
+    try {
+      const [gmail, emailSettings] = await Promise.all([
+        window.repairDesk.getGmailStatus().catch(() => null),
+        window.repairDesk.getEmailSettings().catch(() => null),
+      ]);
+
+      if (gmail?.connected) {
+        return {
+          configured: true,
+          provider: 'gmail',
+          senderDescription: gmail.email
+            ? `connected Gmail (${gmail.email})`
+            : 'connected Gmail',
+        };
+      }
+
+      if (
+        emailSettings?.resendApiKey?.trim() &&
+        emailSettings?.resendFromEmail?.trim()
+      ) {
+        return {
+          configured: true,
+          provider: 'resend',
+          senderDescription: `Resend (${emailSettings.resendFromEmail.trim()})`,
+        };
+      }
+
+      if (
+        emailSettings?.gmailUser?.trim() &&
+        emailSettings?.gmailAppPassword?.trim()
+      ) {
+        return {
+          configured: true,
+          provider: 'gmail',
+          senderDescription: `Gmail SMTP (${emailSettings.gmailUser.trim()})`,
+        };
+      }
+
+      return { configured: false, provider: null, senderDescription: '' };
+    } catch {
+      return { configured: false, provider: null, senderDescription: '' };
+    }
+  }
+
+  function dismissPostSaveEmail() {
+    if (emailSending) return;
+    if (postSaveEmailPrompt) {
+      setNotice(
+        `${postSaveEmailPrompt.order.orderNumber} saved and sent to printer.`,
+      );
+    }
+    setPostSaveEmailPrompt(null);
+  }
+
+  async function sendPostSaveEmail() {
+    if (!postSaveEmailPrompt) return;
+    const recipient = postSaveRecipient.trim();
+    if (!recipient) {
+      setPostSaveEmailError('Please enter a customer email address.');
+      return;
+    }
+    setEmailSending(true);
+    setPostSaveEmailError('');
+    const order = postSaveEmailPrompt.order;
+    try {
+      if (postSaveEmailPrompt.provider === 'gmail' && gmailStatus?.connected) {
+        await window.repairDesk.sendGmailOrderEmail({
+          orderId: order.id,
+          recipient,
+          subject: `Repair Order ${order.orderNumber} · Katia Auto Sales & Repairs`,
+          personalNote: `Thank you for choosing Katia Auto Sales & Repairs. Attached is your official repair order and invoice (${order.orderNumber}.pdf).`,
+        });
+      } else {
+        await window.repairDesk.sendOrderEmail(
+          order,
+          recipient,
+          `Thank you for choosing Katia Auto Sales & Repairs. Attached is your official repair order and invoice (${order.orderNumber}.pdf).`,
+        );
+      }
+      setNotice(`✓ ${order.orderNumber} sent via email to ${recipient}!`);
+      setPostSaveEmailPrompt(null);
+      void window.repairDesk.listWorkOrders().then(setOrders);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setPostSaveEmailError(msg || 'Could not send email.');
+    } finally {
+      setEmailSending(false);
+    }
+  }
+
   async function submitOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -804,9 +907,31 @@ function App() {
         setCustomersOpen(true);
       }
       setCreating(false);
-      setNotice(
-        `${saved.orderNumber} ${editing ? 'updated' : 'saved'} successfully.`,
-      );
+
+      // Trigger native print dialog asynchronously
+      void window.repairDesk.printOrder(saved).catch((printErr) => {
+        console.warn('Direct print error:', printErr);
+      });
+
+      // Check if email delivery is configured (Resend or Gmail)
+      const emailConfig = await checkEmailConfigured();
+      if (emailConfig.configured) {
+        const contact = customerContacts.find(
+          (c) => c.key === orderCustomerKey(saved, customerContacts),
+        );
+        const recipient = saved.email || contact?.email || form.email || '';
+        setPostSaveRecipient(recipient);
+        setPostSaveEmailError('');
+        setPostSaveEmailPrompt({
+          order: saved,
+          provider: emailConfig.provider,
+          senderDescription: emailConfig.senderDescription,
+        });
+      } else {
+        setNotice(
+          `${saved.orderNumber} ${editing ? 'updated' : 'saved'} and sent to printer.`,
+        );
+      }
     } catch (error) {
       setNotice(
         error instanceof Error
@@ -1257,12 +1382,8 @@ function App() {
                     className="primary-button"
                     disabled={busy}
                   >
-                    {busy
-                      ? 'Saving…'
-                      : editingOrder
-                        ? 'Save changes'
-                        : 'Save repair order'}{' '}
-                    <span>→</span>
+                    {busy ? 'Saving & Printing…' : 'Save & Print'}{' '}
+                    <Printer size={16} />
                   </button>
                 </div>
               )}
@@ -2002,6 +2123,127 @@ function App() {
             </footer>
           </div>
         </main>
+        {postSaveEmailPrompt && (
+          <div
+            className="modal-backdrop animate-in"
+            role="presentation"
+            onClick={dismissPostSaveEmail}
+          >
+            <div
+              aria-labelledby="post-save-email-title"
+              aria-modal="true"
+              className="modal-card email-modal-dialog"
+              role="dialog"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="email-modal-header">
+                <div className="email-modal-icon">
+                  <Mail size={20} />
+                </div>
+                <div>
+                  <h2 id="post-save-email-title">Send a copy via email?</h2>
+                  <p>
+                    {postSaveEmailPrompt.order.orderNumber} was saved and sent
+                    to print.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="modal-close-btn"
+                  onClick={dismissPostSaveEmail}
+                  aria-label="Close"
+                  disabled={emailSending}
+                  style={{ marginLeft: 'auto' }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="email-modal-order-summary">
+                <div className="summary-item">
+                  <span className="summary-label">Customer</span>
+                  <strong>{postSaveEmailPrompt.order.customerName}</strong>
+                </div>
+                <div className="summary-item">
+                  <span className="summary-label">Vehicle</span>
+                  <strong>
+                    {[
+                      postSaveEmailPrompt.order.vehicleYear,
+                      postSaveEmailPrompt.order.vehicleMake,
+                      postSaveEmailPrompt.order.vehicleModel,
+                    ]
+                      .filter(Boolean)
+                      .join(' ') || 'Vehicle on file'}
+                  </strong>
+                </div>
+                <div className="summary-item right">
+                  <span className="summary-label">Estimate Total</span>
+                  <strong className="summary-total">
+                    ${chargeTotals(postSaveEmailPrompt.order).total.toFixed(2)}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="email-provider-status">
+                <span className="provider-ready">
+                  <span className="status-dot online" />
+                  Sending via {postSaveEmailPrompt.senderDescription}
+                </span>
+              </div>
+
+              <div className="email-modal-inputs">
+                <label className="field">
+                  <span>Customer Email Address</span>
+                  <input
+                    type="email"
+                    autoFocus
+                    placeholder="customer@example.com"
+                    value={postSaveRecipient}
+                    onChange={(e) => {
+                      setPostSaveRecipient(e.target.value);
+                      setPostSaveEmailError('');
+                    }}
+                    disabled={emailSending}
+                  />
+                </label>
+
+                <div className="email-modal-attachment-chip">
+                  <div className="attachment-icon">📄</div>
+                  <div className="attachment-meta">
+                    <strong>{postSaveEmailPrompt.order.orderNumber}.pdf</strong>
+                    <span>Official PDF Invoice · Attached automatically</span>
+                  </div>
+                </div>
+              </div>
+
+              {postSaveEmailError && (
+                <div className="email-modal-error-box">
+                  <span>⚠</span>
+                  <span>{postSaveEmailError}</span>
+                </div>
+              )}
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={emailSending}
+                  onClick={dismissPostSaveEmail}
+                >
+                  No, thanks
+                </button>
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={emailSending || !postSaveRecipient.trim()}
+                  onClick={() => void sendPostSaveEmail()}
+                >
+                  {emailSending ? 'Sending…' : 'Send email'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {emailModalOrder && (
           <div
             className="modal-backdrop animate-in"

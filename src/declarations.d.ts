@@ -42,6 +42,9 @@ interface Window {
     saveWorkOrderPdf: (
       order: WorkOrder,
     ) => Promise<{ saved: boolean; filePath?: string } | boolean>;
+    printOrder: (
+      order: WorkOrder,
+    ) => Promise<{ success: boolean; error?: string }>;
     openPath: (targetPath: string) => Promise<boolean>;
     exportBackupJson: () => Promise<boolean>;
     exportBackupSqlite: () => Promise<boolean>;

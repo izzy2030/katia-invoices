@@ -827,6 +827,43 @@ async function printWorkOrder(
   return { saved: true, filePath };
 }
 
+async function printOrderDirect(
+  order: WorkOrder,
+): Promise<{ success: boolean; error?: string }> {
+  const printWindow = new BrowserWindow({
+    show: false,
+    webPreferences: {
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  try {
+    const shopSettings = getSettings();
+    await printWindow.loadURL(
+      `data:text/html;charset=utf-8,${encodeURIComponent(receiptHtml(order, shopSettings))}`,
+    );
+    return await new Promise<{ success: boolean; error?: string }>(
+      (resolve) => {
+        printWindow.webContents.print(
+          {
+            silent: false,
+            printBackground: true,
+          },
+          (success, failureReason) => {
+            resolve({ success, error: failureReason || undefined });
+          },
+        );
+      },
+    );
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: errorMsg };
+  } finally {
+    printWindow.close();
+  }
+}
+
 function getEmailSettings(): EmailSettings {
   const provider = (readSetting('email_provider') ?? 'resend') as EmailProvider;
   return {
@@ -1703,6 +1740,9 @@ app
     );
     ipcMain.handle('work-orders:print-pdf', (_event, order: WorkOrder) =>
       printWorkOrder(order),
+    );
+    ipcMain.handle('work-orders:print', (_event, order: WorkOrder) =>
+      printOrderDirect(order),
     );
     ipcMain.handle('shell:open-path', async (_event, targetPath: string) => {
       if (typeof targetPath === 'string' && targetPath.trim()) {
