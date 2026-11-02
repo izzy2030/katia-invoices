@@ -216,7 +216,7 @@ export default function LegacyFields({
   };
   return (
     <>
-      <details className="form-card legacy-details" open>
+      <details className="form-card legacy-details">
         <summary>Internal shop & technician details</summary>
         <div className="form-grid legacy-grid">
           {field('phoneExtension', 'Business phone extension')}
