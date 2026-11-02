@@ -830,37 +830,127 @@ async function printWorkOrder(
 async function printOrderDirect(
   order: WorkOrder,
 ): Promise<{ success: boolean; error?: string }> {
+  const shopSettings = getSettings();
+  let html = receiptHtml(order, shopSettings);
+
+  const printToolbar = `
+    <style>
+      @media print {
+        .print-preview-bar { display: none !important; }
+      }
+      @media screen {
+        body { padding-top: 50px !important; }
+      }
+      .print-preview-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 48px;
+        background: #0f172a;
+        color: #ffffff;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 20px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-size: 13px;
+        z-index: 10000;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+      }
+      .print-preview-bar .title-group {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .print-preview-bar .order-badge {
+        font-weight: 700;
+        color: #60a5fa;
+        font-size: 14px;
+      }
+      .print-preview-bar .btn-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .print-preview-bar button {
+        border: none;
+        border-radius: 6px;
+        padding: 7px 16px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+      .print-preview-bar .btn-print {
+        background: #2563eb;
+        color: #ffffff;
+      }
+      .print-preview-bar .btn-print:hover {
+        background: #1d4ed8;
+      }
+      .print-preview-bar .btn-close {
+        background: rgba(255,255,255,0.12);
+        color: #e2e8f0;
+      }
+      .print-preview-bar .btn-close:hover {
+        background: rgba(255,255,255,0.22);
+      }
+    </style>
+    <div class="print-preview-bar">
+      <div class="title-group">
+        <span class="order-badge">RO #${order.orderNumber}</span>
+        <span>${order.customerName ? `${order.customerName} · ` : ''}Print Preview</span>
+      </div>
+      <div class="btn-group">
+        <button class="btn-print" onclick="window.print()">🖨️ Print</button>
+        <button class="btn-close" onclick="window.close()">Close</button>
+      </div>
+    </div>
+  `;
+
+  html = html.replace(/<body[^>]*>/i, (match) => `${match}${printToolbar}`);
+
   const printWindow = new BrowserWindow({
-    show: false,
+    width: 980,
+    height: 860,
+    minWidth: 750,
+    minHeight: 500,
+    title: `Print - ${order.orderNumber} · Katia Auto Sales & Repairs`,
+    autoHideMenuBar: true,
+    backgroundColor: '#ffffff',
     webPreferences: {
       sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
+
+  printWindow.setMenuBarVisibility(false);
+
   try {
-    const shopSettings = getSettings();
     await printWindow.loadURL(
-      `data:text/html;charset=utf-8,${encodeURIComponent(receiptHtml(order, shopSettings))}`,
+      `data:text/html;charset=utf-8,${encodeURIComponent(html)}`,
     );
-    return await new Promise<{ success: boolean; error?: string }>(
-      (resolve) => {
-        printWindow.webContents.print(
-          {
-            silent: false,
-            printBackground: true,
-          },
-          (success, failureReason) => {
-            resolve({ success, error: failureReason || undefined });
-          },
-        );
+
+    // Launch print dialog directly over the visible window
+    printWindow.webContents.print(
+      {
+        silent: false,
+        printBackground: true,
+      },
+      (success, failureReason) => {
+        if (!success && failureReason && failureReason !== 'cancelled') {
+          console.warn('Print dialog issue:', failureReason);
+        }
       },
     );
+
+    return { success: true };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error('Failed to open print window:', errorMsg);
     return { success: false, error: errorMsg };
-  } finally {
-    printWindow.close();
   }
 }
 
