@@ -26,6 +26,8 @@ import {
   type WorkOrder,
   type WorkOrderInput,
   type WorkOrderStatus,
+  type CatalogPreset,
+  defaultBodyShopPresets,
 } from './workOrder';
 import {
   buildKatiaEmailBrandHeader,
@@ -95,6 +97,18 @@ function initializeDatabase() {
       mileage TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS catalog_presets (
+      id TEXT PRIMARY KEY,
+      category TEXT NOT NULL,
+      shortcut TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      part_number TEXT NOT NULL DEFAULT '',
+      default_price REAL NOT NULL DEFAULT 0,
+      default_quantity REAL NOT NULL DEFAULT 1,
+      taxable INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
   `);
   const contactColumns = database
     .prepare('PRAGMA table_info(customer_contacts)')
@@ -107,6 +121,41 @@ function initializeDatabase() {
     database.exec(
       "ALTER TABLE customer_contacts ADD COLUMN email TEXT NOT NULL DEFAULT ''",
     );
+
+  try {
+    const count = (
+      database
+        .prepare('SELECT COUNT(*) as count FROM catalog_presets')
+        .get() as { count: number }
+    ).count;
+    if (count === 0) {
+      const insert = database.prepare(`
+        INSERT INTO catalog_presets (
+          id, category, shortcut, name, description, part_number,
+          default_price, default_quantity, taxable, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      database.exec('BEGIN IMMEDIATE;');
+      const now = new Date().toISOString();
+      for (const preset of defaultBodyShopPresets) {
+        insert.run(
+          randomUUID(),
+          preset.category,
+          preset.shortcut,
+          preset.name,
+          preset.description,
+          preset.partNumber ?? '',
+          preset.defaultPrice,
+          preset.defaultQuantity ?? 1,
+          preset.taxable ? 1 : 0,
+          now,
+        );
+      }
+      database.exec('COMMIT;');
+    }
+  } catch (seedErr) {
+    console.warn('Could not auto-seed default body shop presets:', seedErr);
+  }
 }
 
 function listWorkOrders(): WorkOrder[] {
@@ -259,6 +308,131 @@ function saveCustomerVehicle(vehicle: {
     mileage: (vehicle.mileage || '').trim(),
     createdAt: now,
   };
+}
+
+function listCatalogPresets(): CatalogPreset[] {
+  const rows = database
+    .prepare(
+      'SELECT id, category, shortcut, name, description, part_number, default_price, default_quantity, taxable, created_at FROM catalog_presets ORDER BY category ASC, name ASC',
+    )
+    .all() as Array<{
+    id: string;
+    category: string;
+    shortcut: string;
+    name: string;
+    description: string;
+    part_number: string;
+    default_price: number;
+    default_quantity: number;
+    taxable: number;
+    created_at: string;
+  }>;
+  return rows.map((r) => ({
+    id: r.id,
+    category: r.category as any,
+    shortcut: r.shortcut,
+    name: r.name,
+    description: r.description,
+    partNumber: r.part_number,
+    defaultPrice: Number(r.default_price),
+    defaultQuantity: Number(r.default_quantity || 1),
+    taxable: Boolean(r.taxable),
+    createdAt: r.created_at,
+  }));
+}
+
+function saveCatalogPreset(preset: Partial<CatalogPreset>): CatalogPreset {
+  if (!preset.name?.trim()) throw new Error('Preset name is required.');
+  if (!preset.description?.trim())
+    throw new Error('Preset description is required.');
+  const shortcut = (preset.shortcut || preset.name)
+    .toLowerCase()
+    .trim()
+    .replace(/^\//, '')
+    .replace(/[^a-z0-9_-]/g, '-');
+  if (!shortcut) throw new Error('A valid shortcut is required.');
+  const id = preset.id || randomUUID();
+  const now = preset.createdAt || new Date().toISOString();
+  database
+    .prepare(
+      `INSERT INTO catalog_presets (
+         id, category, shortcut, name, description, part_number,
+         default_price, default_quantity, taxable, created_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         category = excluded.category,
+         shortcut = excluded.shortcut,
+         name = excluded.name,
+         description = excluded.description,
+         part_number = excluded.part_number,
+         default_price = excluded.default_price,
+         default_quantity = excluded.default_quantity,
+         taxable = excluded.taxable`,
+    )
+    .run(
+      id,
+      preset.category || 'labor',
+      shortcut,
+      preset.name.trim(),
+      preset.description.trim(),
+      (preset.partNumber || '').trim(),
+      Number(preset.defaultPrice) || 0,
+      Number(preset.defaultQuantity) || 1,
+      preset.taxable ? 1 : 0,
+      now,
+    );
+  return {
+    id,
+    category: preset.category || 'labor',
+    shortcut,
+    name: preset.name.trim(),
+    description: preset.description.trim(),
+    partNumber: (preset.partNumber || '').trim(),
+    defaultPrice: Number(preset.defaultPrice) || 0,
+    defaultQuantity: Number(preset.defaultQuantity) || 1,
+    taxable: Boolean(preset.taxable),
+    createdAt: now,
+  };
+}
+
+function deleteCatalogPreset(id: string): boolean {
+  const res = database
+    .prepare('DELETE FROM catalog_presets WHERE id = ?')
+    .run(id);
+  return res.changes > 0;
+}
+
+function resetCatalogPresets(): CatalogPreset[] {
+  database.exec('BEGIN IMMEDIATE;');
+  try {
+    database.exec('DELETE FROM catalog_presets;');
+    const insert = database.prepare(`
+      INSERT INTO catalog_presets (
+        id, category, shortcut, name, description, part_number,
+        default_price, default_quantity, taxable, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const now = new Date().toISOString();
+    for (const preset of defaultBodyShopPresets) {
+      insert.run(
+        randomUUID(),
+        preset.category,
+        preset.shortcut,
+        preset.name,
+        preset.description,
+        preset.partNumber ?? '',
+        preset.defaultPrice,
+        preset.defaultQuantity ?? 1,
+        preset.taxable ? 1 : 0,
+        now,
+      );
+    }
+    database.exec('COMMIT;');
+  } catch (err) {
+    database.exec('ROLLBACK;');
+    throw err;
+  }
+  return listCatalogPresets();
 }
 
 function setWorkOrderStatus(id: string, status: string): WorkOrder {
@@ -1848,6 +2022,14 @@ app
     ipcMain.handle('customer-vehicles:save', (_event, vehicle) =>
       saveCustomerVehicle(vehicle),
     );
+    ipcMain.handle('catalog:list', () => listCatalogPresets());
+    ipcMain.handle('catalog:save', (_event, preset: Partial<CatalogPreset>) =>
+      saveCatalogPreset(preset),
+    );
+    ipcMain.handle('catalog:delete', (_event, id: string) =>
+      deleteCatalogPreset(id),
+    );
+    ipcMain.handle('catalog:reset-defaults', () => resetCatalogPresets());
     ipcMain.handle('work-orders:create', (_event, input: WorkOrderInput) =>
       saveWorkOrder(input),
     );

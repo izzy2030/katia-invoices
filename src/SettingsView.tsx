@@ -3,6 +3,7 @@ import {
   ShieldCheck,
   ArrowLeft,
   Store,
+  Sparkles,
   Percent,
   Mail,
   Palette,
@@ -16,6 +17,7 @@ import type {
   GmailStatus,
 } from './settings/types';
 import ShopTab from './settings/ShopTab';
+import PresetsTab from './settings/PresetsTab';
 import TaxesTab from './settings/TaxesTab';
 import GmailTab from './settings/GmailTab';
 import AppearanceTab from './settings/AppearanceTab';
@@ -35,6 +37,7 @@ interface SettingsViewProps {
   ) => Promise<BackupImportResult | undefined>;
   onExportCsv?: () => void;
   initialTab?: SettingsTab;
+  onPresetsChanged?: () => void;
 }
 
 const TABS: SettingsTabItem[] = [
@@ -44,6 +47,13 @@ const TABS: SettingsTabItem[] = [
     subtitle: 'Identity & Defaults',
     icon: Store,
     colorClass: 'color-blue',
+  },
+  {
+    id: 'presets',
+    title: 'Presets & Catalog',
+    subtitle: 'Body Shop Jobs & Parts',
+    icon: Sparkles,
+    colorClass: 'color-amber',
   },
   {
     id: 'taxes',
@@ -85,6 +95,7 @@ export default function SettingsView({
   onImportBackup,
   onExportCsv,
   initialTab = 'shop',
+  onPresetsChanged,
 }: SettingsViewProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
 
@@ -440,6 +451,10 @@ export default function SettingsView({
             onSave={handleSave}
             saved={saved}
           />
+        )}
+
+        {activeTab === 'presets' && (
+          <PresetsTab onPresetsChanged={onPresetsChanged} />
         )}
 
         {activeTab === 'taxes' && (

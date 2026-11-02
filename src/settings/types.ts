@@ -1,7 +1,13 @@
 import type { BackupImportMode, BackupImportResult } from '../backupService';
 import type { ReceiptStyle, TaxDefaults } from '../workOrder';
 
-export type SettingsTab = 'shop' | 'taxes' | 'email' | 'appearance' | 'backup';
+export type SettingsTab =
+  | 'shop'
+  | 'presets'
+  | 'taxes'
+  | 'email'
+  | 'appearance'
+  | 'backup';
 
 export interface GmailStatus {
   connected: boolean;

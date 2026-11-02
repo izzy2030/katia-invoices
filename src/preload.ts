@@ -1,6 +1,7 @@
 import type { BackupImportMode } from './backupService';
 import type { CustomerContact } from './customerHistory';
 import {
+  type CatalogPreset,
   type DashboardPreferences,
   type EmailSettings,
   type TaxSettings,
@@ -18,6 +19,11 @@ contextBridge.exposeInMainWorld('repairDesk', {
   listCustomerVehicles: () => ipcRenderer.invoke('customer-vehicles:list'),
   saveCustomerVehicle: (vehicle: unknown) =>
     ipcRenderer.invoke('customer-vehicles:save', vehicle),
+  listCatalogPresets: () => ipcRenderer.invoke('catalog:list'),
+  saveCatalogPreset: (preset: Partial<CatalogPreset>) =>
+    ipcRenderer.invoke('catalog:save', preset),
+  deleteCatalogPreset: (id: string) => ipcRenderer.invoke('catalog:delete', id),
+  resetCatalogPresets: () => ipcRenderer.invoke('catalog:reset-defaults'),
   createWorkOrder: (input: WorkOrderInput) =>
     ipcRenderer.invoke('work-orders:create', input),
   updateWorkOrder: (id: string, input: WorkOrderInput) =>

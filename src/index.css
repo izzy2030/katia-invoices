@@ -2382,6 +2382,30 @@ tbody tr:hover {
   color: #ffffff;
 }
 
+.section-add-btn.presets-add {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #b45309;
+}
+
+.section-add-btn.presets-add:hover {
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+[data-theme='abyssal'] .section-add-btn.presets-add,
+[data-theme='slate'] .section-add-btn.presets-add {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+[data-theme='abyssal'] .section-add-btn.presets-add:hover,
+[data-theme='slate'] .section-add-btn.presets-add:hover {
+  background: #f59e0b;
+  color: #0f172a;
+}
+
 /* Column Labels */
 .charge-column-labels {
   display: grid;
@@ -2462,6 +2486,47 @@ tbody tr:hover {
   background: rgba(220, 38, 38, 0.2);
   border-color: rgba(220, 38, 38, 0.4);
   color: #f87171;
+}
+
+.row-desc-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.row-desc-wrap .row-desc-input {
+  width: 100%;
+}
+
+.slash-presets-palette {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 480px;
+  max-width: min(480px, 90vw);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  box-shadow:
+    0 12px 30px -4px rgba(0, 0, 0, 0.22),
+    0 4px 10px -2px rgba(0, 0, 0, 0.1);
+  z-index: 120;
+  overflow: hidden;
+  animation: fadeIn 0.12s ease-out;
+}
+
+.palette-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface-subtle);
+  border-bottom: 1px solid var(--line);
+}
+
+.palette-list {
+  background: var(--paper);
 }
 
 .charges-empty-card {

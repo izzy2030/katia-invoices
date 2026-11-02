@@ -65,6 +65,18 @@ export function ensureBackupSchema(database: DatabaseSync): void {
       phone TEXT NOT NULL DEFAULT '',
       address TEXT NOT NULL DEFAULT ''
     );
+    CREATE TABLE IF NOT EXISTS catalog_presets (
+      id TEXT PRIMARY KEY,
+      category TEXT NOT NULL,
+      shortcut TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      part_number TEXT NOT NULL DEFAULT '',
+      default_price REAL NOT NULL DEFAULT 0,
+      default_quantity REAL NOT NULL DEFAULT 1,
+      taxable INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
   `);
   const orderColumns = database
     .prepare('PRAGMA table_info(work_orders)')

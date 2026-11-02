@@ -358,3 +358,135 @@ export const isPromiseDue = (
   normalizeStatus(order.status) !== 'picked_up' &&
   Boolean(order.datePromised) &&
   order.datePromised <= today;
+
+export interface CatalogPreset {
+  id: string;
+  category: ChargeKind;
+  shortcut: string;
+  name: string;
+  description: string;
+  partNumber?: string;
+  defaultPrice: number;
+  defaultQuantity?: number;
+  taxable: boolean;
+  createdAt: string;
+}
+
+export const defaultBodyShopPresets: Omit<CatalogPreset, 'id' | 'createdAt'>[] =
+  [
+    {
+      category: 'labor',
+      shortcut: 'bumper-ri',
+      name: 'Front Bumper Cover R&I',
+      description: 'Front bumper cover - remove & install (R&I)',
+      partNumber: 'LAB-101',
+      defaultPrice: 65,
+      defaultQuantity: 1.5,
+      taxable: false,
+    },
+    {
+      category: 'labor',
+      shortcut: 'bumper-paint',
+      name: 'Front Bumper Refinish',
+      description: 'Front bumper cover - refinish & clear coat application',
+      partNumber: 'PNT-201',
+      defaultPrice: 65,
+      defaultQuantity: 2.5,
+      taxable: false,
+    },
+    {
+      category: 'labor',
+      shortcut: 'fender-blend',
+      name: 'Fender Blend Panel',
+      description: 'Fender panel - blend color & clear coat',
+      partNumber: 'PNT-202',
+      defaultPrice: 65,
+      defaultQuantity: 1.8,
+      taxable: false,
+    },
+    {
+      category: 'labor',
+      shortcut: 'dent-repair',
+      name: 'Dent Pull & Metal Straightening',
+      description: 'Dent repair, stud pull, and sheet metal contouring',
+      partNumber: 'LAB-102',
+      defaultPrice: 75,
+      defaultQuantity: 2.0,
+      taxable: false,
+    },
+    {
+      category: 'labor',
+      shortcut: 'frame-pull',
+      name: 'Frame Machine Setup & Pull',
+      description:
+        'Frame rack setup, anchoring, and structural dimensional pull',
+      partNumber: 'FRM-301',
+      defaultPrice: 85,
+      defaultQuantity: 3.0,
+      taxable: false,
+    },
+    {
+      category: 'labor',
+      shortcut: 'diag-scan',
+      name: 'Pre/Post Collision Diagnostic Scan',
+      description:
+        'Pre & post repair OBD2 diagnostic computer scan and DTC clearance',
+      partNumber: 'DIAG-01',
+      defaultPrice: 95,
+      defaultQuantity: 1.0,
+      taxable: false,
+    },
+    {
+      category: 'labor',
+      shortcut: 'paint-prep',
+      name: 'Color Sand & De-Nib / Polish',
+      description: 'Wet sanding, de-nibbing, buffing, and high-gloss polish',
+      partNumber: 'DTL-401',
+      defaultPrice: 60,
+      defaultQuantity: 2.0,
+      taxable: false,
+    },
+    {
+      category: 'sublet',
+      shortcut: 'align',
+      name: 'Four-Wheel Computer Alignment',
+      description:
+        'Four-wheel computerized alignment and suspension geometry check',
+      partNumber: 'SUB-501',
+      defaultPrice: 110,
+      defaultQuantity: 1.0,
+      taxable: false,
+    },
+    {
+      category: 'parts',
+      shortcut: 'paint-supplies',
+      name: 'Paint & Refinish Materials',
+      description:
+        'Automotive paint supplies, primer, basecoat, clearcoat & reducers',
+      partNumber: 'MAT-001',
+      defaultPrice: 42,
+      defaultQuantity: 1.0,
+      taxable: true,
+    },
+    {
+      category: 'parts',
+      shortcut: 'clips',
+      name: 'Bumper Clips & Retainers Kit',
+      description:
+        'OEM-spec bumper cover clips, push pins, and hardware fasteners',
+      partNumber: 'HRD-002',
+      defaultPrice: 28,
+      defaultQuantity: 1.0,
+      taxable: true,
+    },
+    {
+      category: 'disposal',
+      shortcut: 'epa',
+      name: 'Hazardous Waste Disposal Fee',
+      description: 'EPA environmental waste & paint residue disposal charge',
+      partNumber: 'EPA-900',
+      defaultPrice: 15,
+      defaultQuantity: 1.0,
+      taxable: false,
+    },
+  ];

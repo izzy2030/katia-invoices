@@ -32,6 +32,12 @@ interface Window {
       licensePlate?: string;
       mileage?: string;
     }) => Promise<import('./customerHistory').CustomerVehicleRecord>;
+    listCatalogPresets: () => Promise<import('./workOrder').CatalogPreset[]>;
+    saveCatalogPreset: (
+      preset: Partial<import('./workOrder').CatalogPreset>,
+    ) => Promise<import('./workOrder').CatalogPreset>;
+    deleteCatalogPreset: (id: string) => Promise<boolean>;
+    resetCatalogPresets: () => Promise<import('./workOrder').CatalogPreset[]>;
     createWorkOrder: (input: WorkOrderInput) => Promise<WorkOrder>;
     updateWorkOrder: (id: string, input: WorkOrderInput) => Promise<WorkOrder>;
     deleteWorkOrder: (id: string) => Promise<boolean>;
