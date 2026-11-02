@@ -15,6 +15,9 @@ contextBridge.exposeInMainWorld('repairDesk', {
   listCustomerContacts: () => ipcRenderer.invoke('customer-contacts:list'),
   saveCustomerContact: (contact: CustomerContact) =>
     ipcRenderer.invoke('customer-contacts:save', contact),
+  listCustomerVehicles: () => ipcRenderer.invoke('customer-vehicles:list'),
+  saveCustomerVehicle: (vehicle: unknown) =>
+    ipcRenderer.invoke('customer-vehicles:save', vehicle),
   createWorkOrder: (input: WorkOrderInput) =>
     ipcRenderer.invoke('work-orders:create', input),
   updateWorkOrder: (id: string, input: WorkOrderInput) =>

@@ -48,6 +48,18 @@ export type CustomerContact = {
   address: string;
 };
 
+export type CustomerVehicleRecord = {
+  id: string;
+  customerKey: string;
+  year: string;
+  make: string;
+  model: string;
+  vin?: string;
+  licensePlate?: string;
+  mileage?: string;
+  createdAt: string;
+};
+
 export const customerKey = (name: string) =>
   name.trim().toLowerCase().replace(/\s+/g, ' ');
 
@@ -119,6 +131,7 @@ const visitDate = (order: WorkOrder) =>
 export function customerProfiles(
   orders: WorkOrder[],
   contacts: CustomerContact[] = [],
+  customVehicles: CustomerVehicleRecord[] = [],
 ): CustomerProfile[] {
   const contactByKey = new Map(
     contacts.map((contact) => [contact.key, contact]),
@@ -207,6 +220,36 @@ export function customerProfiles(
     const visit = visitDate(order);
     if (!profile.lastVisit) profile.lastVisit = visit;
     if (!vehicle.lastVisit) vehicle.lastVisit = visit;
+  }
+
+  for (const cv of customVehicles) {
+    const entry = profiles.get(cv.customerKey);
+    if (!entry) continue;
+
+    const { profile, vehicles } = entry;
+    const vKey = cv.vin
+      ? `vin:${compactCode(cv.vin)}`
+      : cv.licensePlate
+        ? `plate:${compactCode(cv.licensePlate)}`
+        : `custom:${cv.id}`;
+
+    let vehicle = vehicles.get(vKey);
+    if (!vehicle) {
+      vehicle = {
+        key: vKey,
+        vehicleYear: cv.year,
+        vehicleMake: cv.make,
+        vehicleModel: cv.model,
+        vin: cv.vin || '',
+        licensePlate: cv.licensePlate || '',
+        label: '',
+        orders: [],
+        lastVisit: cv.createdAt ? cv.createdAt.slice(0, 10) : '',
+      };
+      vehicles.set(vKey, vehicle);
+      profile.vehicles.push(vehicle);
+    }
+    vehicle.label = vehicleLabel(vehicle);
   }
 
   return [...profiles.values()].map(({ profile }) => {

@@ -19,6 +19,19 @@ interface Window {
     listWorkOrders: () => Promise<WorkOrder[]>;
     listCustomerContacts: () => Promise<CustomerContact[]>;
     saveCustomerContact: (contact: CustomerContact) => Promise<CustomerContact>;
+    listCustomerVehicles: () => Promise<
+      import('./customerHistory').CustomerVehicleRecord[]
+    >;
+    saveCustomerVehicle: (vehicle: {
+      id?: string;
+      customerKey: string;
+      year: string;
+      make: string;
+      model: string;
+      vin?: string;
+      licensePlate?: string;
+      mileage?: string;
+    }) => Promise<import('./customerHistory').CustomerVehicleRecord>;
     createWorkOrder: (input: WorkOrderInput) => Promise<WorkOrder>;
     updateWorkOrder: (id: string, input: WorkOrderInput) => Promise<WorkOrder>;
     deleteWorkOrder: (id: string) => Promise<boolean>;

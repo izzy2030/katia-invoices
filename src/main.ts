@@ -84,6 +84,17 @@ function initializeDatabase() {
       phone TEXT NOT NULL DEFAULT '',
       address TEXT NOT NULL DEFAULT ''
     );
+    CREATE TABLE IF NOT EXISTS customer_vehicles (
+      id TEXT PRIMARY KEY,
+      customer_key TEXT NOT NULL,
+      year TEXT NOT NULL DEFAULT '',
+      make TEXT NOT NULL DEFAULT '',
+      model TEXT NOT NULL DEFAULT '',
+      vin TEXT NOT NULL DEFAULT '',
+      license_plate TEXT NOT NULL DEFAULT '',
+      mileage TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    );
   `);
   const contactColumns = database
     .prepare('PRAGMA table_info(customer_contacts)')
@@ -171,6 +182,83 @@ function saveCustomerContact(contact: CustomerContact): CustomerContact {
     )
     .run(saved.key, saved.name, saved.phone, saved.address, saved.email);
   return saved;
+}
+
+function listCustomerVehicles() {
+  const rows = database
+    .prepare(
+      'SELECT id, customer_key, year, make, model, vin, license_plate, mileage, created_at FROM customer_vehicles ORDER BY created_at DESC',
+    )
+    .all() as Array<{
+    id: string;
+    customer_key: string;
+    year: string;
+    make: string;
+    model: string;
+    vin: string;
+    license_plate: string;
+    mileage: string;
+    created_at: string;
+  }>;
+  return rows.map((r) => ({
+    id: r.id,
+    customerKey: r.customer_key,
+    year: r.year,
+    make: r.make,
+    model: r.model,
+    vin: r.vin,
+    licensePlate: r.license_plate,
+    mileage: r.mileage,
+    createdAt: r.created_at,
+  }));
+}
+
+function saveCustomerVehicle(vehicle: {
+  id?: string;
+  customerKey: string;
+  year: string;
+  make: string;
+  model: string;
+  vin?: string;
+  licensePlate?: string;
+  mileage?: string;
+}) {
+  const id = vehicle.id || randomUUID();
+  const now = new Date().toISOString();
+  database
+    .prepare(
+      `INSERT INTO customer_vehicles (id, customer_key, year, make, model, vin, license_plate, mileage, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         year = excluded.year,
+         make = excluded.make,
+         model = excluded.model,
+         vin = excluded.vin,
+         license_plate = excluded.license_plate,
+         mileage = excluded.mileage`,
+    )
+    .run(
+      id,
+      vehicle.customerKey,
+      (vehicle.year || '').trim(),
+      (vehicle.make || '').trim(),
+      (vehicle.model || '').trim(),
+      (vehicle.vin || '').trim(),
+      (vehicle.licensePlate || '').trim(),
+      (vehicle.mileage || '').trim(),
+      now,
+    );
+  return {
+    id,
+    customerKey: vehicle.customerKey,
+    year: (vehicle.year || '').trim(),
+    make: (vehicle.make || '').trim(),
+    model: (vehicle.model || '').trim(),
+    vin: (vehicle.vin || '').trim(),
+    licensePlate: (vehicle.licensePlate || '').trim(),
+    mileage: (vehicle.mileage || '').trim(),
+    createdAt: now,
+  };
 }
 
 function setWorkOrderStatus(id: string, status: string): WorkOrder {
@@ -1594,6 +1682,10 @@ app
     ipcMain.handle(
       'customer-contacts:save',
       (_event, contact: CustomerContact) => saveCustomerContact(contact),
+    );
+    ipcMain.handle('customer-vehicles:list', () => listCustomerVehicles());
+    ipcMain.handle('customer-vehicles:save', (_event, vehicle) =>
+      saveCustomerVehicle(vehicle),
     );
     ipcMain.handle('work-orders:create', (_event, input: WorkOrderInput) =>
       saveWorkOrder(input),

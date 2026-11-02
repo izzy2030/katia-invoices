@@ -14,6 +14,15 @@ type Props = {
   onSelectCustomer: (key: string) => void;
   onNewOrder: (customer: CustomerProfile, vehicle?: CustomerVehicle) => void;
   onSaveContact: (contact: CustomerContact) => Promise<boolean>;
+  onSaveVehicle?: (vehicle: {
+    customerKey: string;
+    year: string;
+    make: string;
+    model: string;
+    licensePlate: string;
+    vin: string;
+    mileage: string;
+  }) => Promise<boolean>;
   onOpenOrder: (orderId: string, customerKey: string) => void;
 };
 
@@ -62,6 +71,7 @@ function CustomersView({
   onSelectCustomer,
   onNewOrder,
   onSaveContact,
+  onSaveVehicle,
   onOpenOrder,
 }: Props) {
   const [query, setQuery] = useState('');
@@ -72,6 +82,9 @@ function CustomersView({
   const matches = filterCustomers(customers, query);
   const [editingContact, setEditingContact] = useState(false);
   const [savingContact, setSavingContact] = useState(false);
+  const [addingVehicle, setAddingVehicle] = useState(false);
+  const [savingVehicle, setSavingVehicle] = useState(false);
+  const [vehicleError, setVehicleError] = useState('');
   const selected =
     matches.find((customer) => customer.key === selectedKey) ?? matches[0];
   const historyVehicle =
@@ -81,6 +94,66 @@ function CustomersView({
         )
       : undefined;
   const historyOrders = historyVehicle?.orders ?? selected?.orders ?? [];
+
+  async function handleAddVehicle(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selected) return;
+    const data = new FormData(event.currentTarget);
+    const submitter = (event.nativeEvent as SubmitEvent)
+      .submitter as HTMLButtonElement | null;
+    const action = submitter?.value || 'save';
+
+    const year = String(data.get('year') ?? '').trim();
+    const make = String(data.get('make') ?? '').trim();
+    const model = String(data.get('model') ?? '').trim();
+    const licensePlate = String(data.get('licensePlate') ?? '').trim();
+    const vin = String(data.get('vin') ?? '').trim();
+    const mileage = String(data.get('mileage') ?? '').trim();
+
+    if (!year || !make || !model) {
+      setVehicleError('Please provide Year, Make, and Model.');
+      return;
+    }
+
+    setSavingVehicle(true);
+    setVehicleError('');
+
+    const saved = onSaveVehicle
+      ? await onSaveVehicle({
+          customerKey: selected.key,
+          year,
+          make,
+          model,
+          licensePlate,
+          vin,
+          mileage,
+        })
+      : true;
+
+    setSavingVehicle(false);
+
+    if (saved) {
+      setAddingVehicle(false);
+      if (action === 'saveAndOrder') {
+        const vKey = vin
+          ? `vin:${vin.replace(/[\s-]+/g, '').toUpperCase()}`
+          : licensePlate
+            ? `plate:${licensePlate.replace(/[\s-]+/g, '').toUpperCase()}`
+            : `custom:${Date.now()}`;
+        onNewOrder(selected, {
+          key: vKey,
+          vehicleYear: year,
+          vehicleMake: make,
+          vehicleModel: model,
+          vin,
+          licensePlate,
+          label: `${year} ${make} ${model}`,
+          orders: [],
+          lastVisit: '',
+        });
+      }
+    }
+  }
 
   async function saveContact(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -126,6 +199,8 @@ function CustomersView({
             placeholder="Name, phone, VIN, or plate…"
             onChange={(event) => {
               setEditingContact(false);
+              setAddingVehicle(false);
+              setVehicleError('');
               setHistoryFilter(null);
               setQuery(event.target.value);
             }}
@@ -141,6 +216,8 @@ function CustomersView({
               }`}
               onClick={() => {
                 setEditingContact(false);
+                setAddingVehicle(false);
+                setVehicleError('');
                 setHistoryFilter(null);
                 onSelectCustomer(customer.key);
               }}
@@ -285,34 +362,69 @@ function CustomersView({
 
           <section className="customer-section">
             <div className="customer-section-head">
-              <h3>Vehicles</h3>
-              <span>{selected.vehicles.length}</span>
+              <div className="customer-section-title">
+                <h3>Vehicles</h3>
+                <span>{selected.vehicles.length}</span>
+              </div>
+              <button
+                type="button"
+                className="add-vehicle-btn"
+                onClick={() => {
+                  setVehicleError('');
+                  setAddingVehicle(true);
+                }}
+              >
+                + Add Vehicle
+              </button>
             </div>
-            <div className="vehicle-cards">
-              {selected.vehicles.map((vehicle) => (
-                <div className="vehicle-card" key={vehicle.key}>
-                  <div>
-                    <strong>{vehicle.label}</strong>
-                    <small>
-                      {[vehicle.licensePlate, vehicle.vin]
-                        .filter(Boolean)
-                        .join(' · ') || 'No plate or VIN on file'}
-                    </small>
-                    <span>
-                      {vehicle.orders.length}{' '}
-                      {vehicle.orders.length === 1 ? 'order' : 'orders'} · Last{' '}
-                      {day(vehicle.lastVisit)}
-                    </span>
+            {selected.vehicles.length === 0 ? (
+              <div className="vehicle-empty-state">
+                <p>No vehicles on file for {selected.name}.</p>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => {
+                    setVehicleError('');
+                    setAddingVehicle(true);
+                  }}
+                >
+                  + Add Vehicle
+                </button>
+              </div>
+            ) : (
+              <div className="vehicle-cards">
+                {selected.vehicles.map((vehicle) => (
+                  <div className="vehicle-card" key={vehicle.key}>
+                    <div>
+                      <strong>{vehicle.label}</strong>
+                      <small>
+                        {[vehicle.licensePlate, vehicle.vin]
+                          .filter(Boolean)
+                          .join(' · ') || 'No plate or VIN on file'}
+                      </small>
+                      <span>
+                        {vehicle.orders.length}{' '}
+                        {vehicle.orders.length === 1 ? 'order' : 'orders'} ·
+                        Last {day(vehicle.lastVisit)}
+                      </span>
+                    </div>
+                    <div className="vehicle-card-actions">
+                      <button
+                        type="button"
+                        className="add-vehicle-pill-btn"
+                        onClick={() => {
+                          setVehicleError('');
+                          setAddingVehicle(true);
+                        }}
+                        title="Add a new vehicle for this customer"
+                      >
+                        Add Vehicle
+                      </button>
+                    </div>
                   </div>
-                  <NewOrderButton
-                    customer={selected}
-                    vehicle={vehicle}
-                    subtle
-                    onNewOrder={onNewOrder}
-                  />
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
 
           <section className="customer-section">
@@ -410,6 +522,126 @@ function CustomersView({
             Clear search
           </button>
         </section>
+      )}
+
+      {addingVehicle && selected && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setAddingVehicle(false)}
+          role="presentation"
+        >
+          <div
+            className="modal-card add-vehicle-modal-card"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-labelledby="add-vehicle-dialog-title"
+          >
+            <div className="add-vehicle-modal-head">
+              <div>
+                <h2 id="add-vehicle-dialog-title">Add Vehicle</h2>
+                <p>
+                  Add a new car for <strong>{selected.name}</strong>
+                </p>
+              </div>
+              <button
+                type="button"
+                className="modal-close-icon-btn"
+                onClick={() => setAddingVehicle(false)}
+                aria-label="Close dialog"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleAddVehicle}>
+              <div className="form-grid add-vehicle-grid">
+                <label className="field">
+                  <span>Year *</span>
+                  <input
+                    name="year"
+                    type="text"
+                    required
+                    placeholder="e.g. 2024"
+                    defaultValue={new Date().getFullYear()}
+                    autoFocus
+                  />
+                </label>
+                <label className="field">
+                  <span>Make *</span>
+                  <input
+                    name="make"
+                    type="text"
+                    required
+                    placeholder="e.g. Toyota"
+                  />
+                </label>
+                <label className="field">
+                  <span>Model *</span>
+                  <input
+                    name="model"
+                    type="text"
+                    required
+                    placeholder="e.g. Camry"
+                  />
+                </label>
+                <label className="field">
+                  <span>License plate</span>
+                  <input
+                    name="licensePlate"
+                    type="text"
+                    placeholder="e.g. ABC 1234"
+                  />
+                </label>
+                <label className="field full-width">
+                  <span>VIN / Serial number</span>
+                  <input
+                    name="vin"
+                    type="text"
+                    placeholder="17-character VIN"
+                    maxLength={17}
+                  />
+                </label>
+                <label className="field full-width">
+                  <span>Mileage</span>
+                  <input name="mileage" type="text" placeholder="e.g. 45,000" />
+                </label>
+              </div>
+
+              {vehicleError && (
+                <div className="vehicle-modal-error">{vehicleError}</div>
+              )}
+
+              <div className="modal-actions add-vehicle-modal-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setAddingVehicle(false)}
+                  disabled={savingVehicle}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  name="action"
+                  value="save"
+                  className="secondary-button save-vehicle-btn"
+                  disabled={savingVehicle}
+                >
+                  {savingVehicle ? 'Saving…' : 'Save Vehicle'}
+                </button>
+                <button
+                  type="submit"
+                  name="action"
+                  value="saveAndOrder"
+                  className="primary-button"
+                  disabled={savingVehicle}
+                >
+                  {savingVehicle ? 'Saving…' : 'Save & Start Order →'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </section>
   );

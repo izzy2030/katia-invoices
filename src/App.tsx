@@ -13,6 +13,7 @@ import {
   type CustomerContact,
   type CustomerProfile,
   type CustomerVehicle,
+  type CustomerVehicleRecord,
 } from './customerHistory';
 import {
   builtInTaxDefaults,
@@ -197,6 +198,9 @@ function App() {
   const [customerContacts, setCustomerContacts] = useState<CustomerContact[]>(
     [],
   );
+  const [customerVehicles, setCustomerVehicles] = useState<
+    CustomerVehicleRecord[]
+  >([]);
   const [shopDefaults, setShopDefaults] = useState<TaxDefaults>({
     ...builtInTaxDefaults,
   });
@@ -264,6 +268,10 @@ function App() {
     void window.repairDesk
       .listCustomerContacts()
       .then(setCustomerContacts)
+      .catch(() => undefined);
+    void window.repairDesk
+      .listCustomerVehicles()
+      .then(setCustomerVehicles)
       .catch(() => undefined);
     void window.repairDesk
       .getSettings()
@@ -451,8 +459,8 @@ function App() {
     ? orders.find((order) => order.id === editingId)
     : undefined;
   const customers = useMemo(
-    () => customerProfiles(orders, customerContacts),
-    [orders, customerContacts],
+    () => customerProfiles(orders, customerContacts, customerVehicles),
+    [orders, customerContacts, customerVehicles],
   );
   const totals = chargeTotals(form);
   const revisedTotals = supplementTotals(form);
@@ -512,6 +520,35 @@ function App() {
         error instanceof Error
           ? error.message
           : 'Could not save customer contact details.',
+      );
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveCustomerVehicle(vehicle: {
+    customerKey: string;
+    year: string;
+    make: string;
+    model: string;
+    licensePlate: string;
+    vin: string;
+    mileage: string;
+  }) {
+    setBusy(true);
+    setNotice('');
+    try {
+      const saved = await window.repairDesk.saveCustomerVehicle(vehicle);
+      setCustomerVehicles((current) => [
+        saved,
+        ...current.filter((entry) => entry.id !== saved.id),
+      ]);
+      setNotice('Vehicle saved to customer profile.');
+      return true;
+    } catch (error) {
+      setNotice(
+        error instanceof Error ? error.message : 'Could not save vehicle.',
       );
       return false;
     } finally {
@@ -1228,6 +1265,7 @@ function App() {
                 onSelectCustomer={setSelectedCustomerKey}
                 onNewOrder={startFromHistory}
                 onSaveContact={saveCustomerContact}
+                onSaveVehicle={saveCustomerVehicle}
                 onOpenOrder={(orderId, historyKey) => {
                   const order = orders.find((entry) => entry.id === orderId);
                   if (order) startEdit(order, historyKey);

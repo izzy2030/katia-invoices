@@ -3370,7 +3370,21 @@ button:focus-visible {
   margin: 0;
 }
 
-.customer-section-head > span {
+.customer-section-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.customer-section-title {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.customer-section-head span,
+.customer-section-title span {
   background: var(--surface-hover);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -3379,6 +3393,180 @@ button:focus-visible {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   padding: 2px 8px;
+}
+
+.add-vehicle-btn {
+  align-items: center;
+  background: var(--surface-subtle);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 4px;
+  padding: 5px 12px;
+  transition: all 0.14s ease;
+}
+
+.add-vehicle-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent-strong);
+}
+
+[data-theme='abyssal'] .add-vehicle-btn:hover {
+  color: var(--accent);
+}
+
+.vehicle-card-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.add-vehicle-pill-btn {
+  align-items: center;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-sm);
+  color: var(--accent-strong);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 5px;
+  padding: 6px 14px;
+  transition: all 0.14s ease;
+  white-space: nowrap;
+}
+
+.add-vehicle-pill-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff !important;
+}
+
+[data-theme='abyssal'] .add-vehicle-pill-btn {
+  background: rgba(37, 99, 235, 0.15);
+  border-color: rgba(37, 99, 235, 0.35);
+  color: #60a5fa;
+}
+
+[data-theme='abyssal'] .add-vehicle-pill-btn:hover {
+  background: var(--accent);
+  color: #fff !important;
+}
+
+.vehicle-empty-state {
+  align-items: center;
+  background: var(--surface-subtle);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.vehicle-empty-state p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+/* Add Vehicle Modal */
+.add-vehicle-modal-card {
+  max-width: 520px;
+  width: 100%;
+}
+
+.add-vehicle-modal-head {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.add-vehicle-modal-head h2 {
+  color: var(--ink);
+  font:
+    700 18px Manrope,
+    sans-serif;
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+
+.add-vehicle-modal-head p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.modal-close-icon-btn {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  font-size: 18px;
+  height: 28px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  transition:
+    color 0.14s ease,
+    background 0.14s ease;
+  width: 28px;
+}
+
+.modal-close-icon-btn:hover {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.add-vehicle-grid {
+  gap: 12px;
+}
+
+.vehicle-modal-error {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: var(--radius-sm);
+  color: #dc2626;
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-top: 12px;
+  padding: 8px 12px;
+}
+
+[data-theme='abyssal'] .vehicle-modal-error {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.add-vehicle-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.save-vehicle-btn {
+  background: var(--surface-subtle);
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+}
+
+.save-vehicle-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--ink-secondary);
 }
 
 .vehicle-cards {

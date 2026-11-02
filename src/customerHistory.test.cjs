@@ -114,6 +114,33 @@ assert.equal(sortedProfiles.slice(0, 5).length, 5);
 assert.equal(sortedProfiles.slice(0, 5)[0].name, 'Customer 8');
 assert.equal(sortedProfiles.slice(0, 5)[4].name, 'Customer 4');
 
+// Verify custom added vehicle via Add Vehicle modal
+const customVehicle = {
+  id: 'veh-custom-1',
+  customerKey: contact.key,
+  year: '2024',
+  make: 'Toyota',
+  model: 'RAV4',
+  vin: '4T3BWRFV2RU999999',
+  licensePlate: 'NEW-C4R',
+  mileage: '12,500',
+  createdAt: '2026-11-01T12:00:00Z',
+};
+const profilesWithCustom = customerProfiles(
+  [order],
+  [contact],
+  [customVehicle],
+);
+assert.equal(profilesWithCustom.length, 1);
+assert.equal(profilesWithCustom[0].vehicles.length, 2);
+const added = profilesWithCustom[0].vehicles.find(
+  (v) => v.vehicleModel === 'RAV4',
+);
+assert.ok(added, 'Added custom vehicle should be present in customer profile');
+assert.equal(added.vehicleYear, '2024');
+assert.equal(added.licensePlate, 'NEW-C4R');
+assert.equal(added.label, '2024 Toyota RAV4');
+
 console.log(
   'Customer rename preserves contacts, vehicles, history, and historical order data.',
 );
