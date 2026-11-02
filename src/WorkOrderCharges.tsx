@@ -425,7 +425,7 @@ export default function WorkOrderCharges({
 
             {/* Quick Presets Picker Button */}
             <div
-              className="relative"
+              className="presets-anchor"
               ref={quickPickerSection === 'labor' ? quickPickerRef : null}
             >
               <button
@@ -524,9 +524,7 @@ export default function WorkOrderCharges({
           <div className="charge-column-labels labor-columns">
             <span className="col-type">Type</span>
             <span className="col-qty">Hours/Qty</span>
-            <span className="col-desc">
-              Work / Service Description (type &ldquo;/&rdquo; for presets)
-            </span>
+            <span className="col-desc">Work / service description</span>
             <span className="col-price">Rate/Price</span>
             <span className="col-total">Amount</span>
             <span className="col-tax">Tax</span>
@@ -545,25 +543,17 @@ export default function WorkOrderCharges({
                   refinishing, or mechanical labor.
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="empty-card-actions">
                 <button
                   type="button"
-                  className="empty-card-action"
-                  style={{
-                    background: 'var(--accent)',
-                    color: '#ffffff',
-                    border: '1px solid var(--accent)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
+                  className="empty-card-action presets"
                   onClick={() => {
                     setQuickPickerSection('labor');
                     setQuickSearch('');
                   }}
                 >
                   <Sparkles size={13} />
-                  <span>⚡ Presets (/)</span>
+                  <span>Presets (/)</span>
                 </button>
                 <button
                   type="button"
@@ -610,7 +600,7 @@ export default function WorkOrderCharges({
                   />
 
                   {/* Description input with Slash Command Dropdown */}
-                  <div className="row-desc-wrap relative">
+                  <div className="row-desc-wrap">
                     <input
                       className="row-desc-input"
                       aria-label="Work description"
@@ -619,7 +609,7 @@ export default function WorkOrderCharges({
                         handleDescChange('labor', index, e.target.value)
                       }
                       onKeyDown={(e) => handleDescKeyDown(e, 'labor', index)}
-                      placeholder="Describe repair operation (or type '/' for body shop presets)…"
+                      placeholder="Description, or / for presets"
                     />
 
                     {isSlashOpen && (
@@ -714,7 +704,7 @@ export default function WorkOrderCharges({
                     onChange={(e) =>
                       updateLabor(index, { unitPrice: e.target.value })
                     }
-                    placeholder="Rate ($)"
+                    placeholder="0.00"
                   />
 
                   <output
@@ -781,7 +771,7 @@ export default function WorkOrderCharges({
 
             {/* Quick Parts Presets Picker Button */}
             <div
-              className="relative"
+              className="presets-anchor"
               ref={quickPickerSection === 'parts' ? quickPickerRef : null}
             >
               <button
@@ -880,9 +870,7 @@ export default function WorkOrderCharges({
           <div className="charge-column-labels parts-columns">
             <span className="col-qty">Qty</span>
             <span className="col-partno">Part Number</span>
-            <span className="col-desc">
-              Part Description (type &ldquo;/&rdquo; for presets)
-            </span>
+            <span className="col-desc">Part description</span>
             <span className="col-price">Unit Price</span>
             <span className="col-total">Amount</span>
             <span className="col-tax">Tax</span>
@@ -902,18 +890,10 @@ export default function WorkOrderCharges({
                   &ldquo;Presets (/)&rdquo;.
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="empty-card-actions">
                 <button
                   type="button"
-                  className="empty-card-action"
-                  style={{
-                    background: 'var(--accent)',
-                    color: '#ffffff',
-                    border: '1px solid var(--accent)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
+                  className="empty-card-action presets"
                   onClick={() => {
                     setQuickPickerSection('parts');
                     setQuickSearch('');
@@ -921,7 +901,7 @@ export default function WorkOrderCharges({
                   }}
                 >
                   <Sparkles size={13} />
-                  <span>⚡ Presets (/)</span>
+                  <span>Presets (/)</span>
                 </button>
                 <button
                   type="button"
@@ -959,11 +939,11 @@ export default function WorkOrderCharges({
                     onChange={(e) =>
                       updatePart(index, { partNumber: e.target.value })
                     }
-                    placeholder="Part no. (OEM / #)"
+                    placeholder="Part no."
                   />
 
                   {/* Description input with Slash Command Dropdown */}
-                  <div className="row-desc-wrap relative">
+                  <div className="row-desc-wrap">
                     <input
                       className="row-desc-input"
                       aria-label="Part description"
@@ -972,7 +952,7 @@ export default function WorkOrderCharges({
                         handleDescChange('parts', index, e.target.value)
                       }
                       onKeyDown={(e) => handleDescKeyDown(e, 'parts', index)}
-                      placeholder="Describe replacement part (or type '/' for presets)…"
+                      placeholder="Description, or / for presets"
                     />
 
                     {isSlashOpen && (
@@ -1063,7 +1043,7 @@ export default function WorkOrderCharges({
                     onChange={(e) =>
                       updatePart(index, { unitPrice: e.target.value })
                     }
-                    placeholder="Unit price ($)"
+                    placeholder="0.00"
                   />
 
                   <output

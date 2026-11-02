@@ -24,6 +24,7 @@
   --accent: #2563eb;
   --accent-strong: #1d4ed8;
   --accent-soft: #eff6ff;
+  --accent-subtle: var(--accent-soft);
   --accent-border: #bfdbfe;
   --accent-shadow: rgba(37, 99, 235, 0.25);
   --focus-ring: rgba(37, 99, 235, 0.18);
@@ -2163,11 +2164,11 @@ tbody tr:hover {
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
   padding: 8px 10px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink);
   outline: none;
   resize: vertical;
-  line-height: 1.4;
+  line-height: 1.45;
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
@@ -2182,7 +2183,7 @@ tbody tr:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -2216,7 +2217,7 @@ tbody tr:hover {
 }
 
 .notes-empty-trigger {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -2274,14 +2275,6 @@ tbody tr:hover {
   gap: 10px;
 }
 
-.charges-section.labor-section {
-  border-left: 4px solid var(--accent);
-}
-
-.charges-section.parts-section {
-  border-left: 4px solid #0d9488;
-}
-
 .section-bar {
   display: flex;
   align-items: center;
@@ -2331,7 +2324,7 @@ tbody tr:hover {
 
 .section-subtitle {
   display: block;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 1px;
 }
@@ -2359,68 +2352,80 @@ tbody tr:hover {
   gap: 6px;
   padding: 6px 12px;
   border-radius: var(--radius-sm);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.section-add-btn.primary-add {
-  background: var(--accent-subtle);
-  border: 1px solid var(--accent);
-  color: var(--accent);
-}
-
-.section-add-btn.primary-add:hover {
-  background: var(--accent);
-  color: #ffffff;
-}
-
+.section-add-btn.primary-add,
 .section-add-btn.parts-add {
-  background: rgba(13, 148, 136, 0.08);
-  border: 1px solid #0d9488;
-  color: #0d9488;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: var(--accent-strong);
 }
 
+.section-add-btn.primary-add:hover,
 .section-add-btn.parts-add:hover {
-  background: #0d9488;
-  color: #ffffff;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--paper);
 }
 
 .section-add-btn.presets-add {
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  color: #b45309;
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  color: var(--ink-secondary);
 }
 
 .section-add-btn.presets-add:hover {
-  background: #f59e0b;
-  color: #ffffff;
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent-strong);
 }
 
-[data-theme='abyssal'] .section-add-btn.presets-add,
-[data-theme='slate'] .section-add-btn.presets-add {
-  background: rgba(245, 158, 11, 0.15);
-  border-color: rgba(245, 158, 11, 0.4);
-  color: #fbbf24;
+[data-theme='abyssal'] .section-add-btn.primary-add,
+[data-theme='abyssal'] .section-add-btn.parts-add,
+[data-theme='abyssal'] .section-add-btn.presets-add:hover {
+  color: var(--accent);
 }
 
-[data-theme='abyssal'] .section-add-btn.presets-add:hover,
-[data-theme='slate'] .section-add-btn.presets-add:hover {
-  background: #f59e0b;
-  color: #0f172a;
+[data-theme='abyssal'] .section-add-btn.primary-add:hover,
+[data-theme='abyssal'] .section-add-btn.parts-add:hover {
+  color: var(--paper);
+}
+
+.presets-anchor {
+  position: relative;
+}
+
+.presets-anchor .slash-presets-palette {
+  left: auto;
+  right: 0;
 }
 
 /* Column Labels */
 .charge-column-labels {
   display: grid;
   gap: 7px;
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-  padding: 0 4px;
+  color: var(--ink-secondary);
+}
+
+.charge-column-labels .col-qty,
+.charge-column-labels .col-tax {
+  text-align: center;
+}
+
+.charge-column-labels .col-price {
+  text-align: right;
+  padding-right: 9px;
+}
+
+.charge-column-labels .col-total {
+  text-align: right;
+  padding-right: 4px;
 }
 
 .charge-column-labels.labor-columns {
@@ -2463,7 +2468,45 @@ tbody tr:hover {
   display: flex;
   font-size: 13px;
   gap: 5px;
+  height: 40px;
+  justify-content: center;
   white-space: nowrap;
+}
+
+.charge-row .row-tax-label input[type='checkbox'] {
+  accent-color: var(--accent);
+  cursor: pointer;
+  height: 16px;
+  margin: 0;
+  width: 16px;
+}
+
+/* The Tax column heading already names this checkbox. */
+@media (min-width: 801px) {
+  .row-tax-label span {
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    width: 1px;
+  }
+}
+
+.charge-row .row-qty-input {
+  text-align: center;
+}
+
+.charge-row .row-price-input {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.row-qty-input::-webkit-outer-spin-button,
+.row-qty-input::-webkit-inner-spin-button,
+.row-price-input::-webkit-outer-spin-button,
+.row-price-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .row-remove-btn {
@@ -3182,8 +3225,15 @@ tbody tr:hover {
   flex-shrink: 0;
 }
 
+.empty-card-actions {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
 .empty-card-action {
-  padding: 4px 10px;
+  padding: 6px 10px;
   background: var(--surface-hover);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
@@ -3199,6 +3249,12 @@ tbody tr:hover {
   background: var(--paper);
   color: var(--accent);
   border-color: var(--accent);
+}
+
+.empty-card-action.presets {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
 }
 
 .cost-summary {
@@ -3224,6 +3280,11 @@ tbody tr:hover {
   color: var(--ink);
   font-size: 13.5px;
   font-variant-numeric: tabular-nums;
+}
+
+.cost-summary strong.is-zero {
+  color: var(--muted);
+  font-weight: 500;
 }
 
 .cost-summary-tax-rate {
@@ -3278,7 +3339,7 @@ tbody tr:hover {
 
 .cost-summary-tax-input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-focus, rgba(37, 99, 235, 0.18));
+  box-shadow: 0 0 0 3px var(--focus-ring);
   outline: none;
 }
 
@@ -3453,6 +3514,38 @@ button:focus-visible {
   height: 40px;
 }
 
+.order-workspace input,
+.order-workspace select,
+.order-workspace textarea {
+  font-weight: 500;
+  scroll-margin-top: 150px;
+}
+
+.order-workspace input::placeholder,
+.order-workspace textarea::placeholder {
+  font-weight: 400;
+}
+
+/* Empty boxes recede so the eye lands on what is still left to fill. */
+.order-workspace .field input:placeholder-shown:not(:focus),
+.order-workspace .field textarea:placeholder-shown:not(:focus),
+.order-workspace .notes-textarea:placeholder-shown:not(:focus),
+.order-workspace .charge-row input:placeholder-shown:not(:focus) {
+  background: var(--surface-subtle);
+  box-shadow: none;
+}
+
+.order-workspace .form-card {
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.order-workspace .form-card:focus-within {
+  border-color: var(--accent-border);
+  box-shadow: var(--shadow-md);
+}
+
 .order-workspace .notice {
   margin: 0 0 14px;
 }
@@ -3462,12 +3555,60 @@ button:focus-visible {
 }
 
 .legacy-details summary {
+  align-items: center;
+  border-radius: var(--radius-xs);
   color: var(--ink);
   cursor: pointer;
+  display: flex;
   font:
-    700 14px Manrope,
+    700 15px Manrope,
     sans-serif;
+  gap: 10px;
+  letter-spacing: -0.01em;
+  list-style: none;
   user-select: none;
+}
+
+.legacy-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.legacy-details summary::before {
+  border-bottom: 2px solid var(--muted);
+  border-right: 2px solid var(--muted);
+  content: '';
+  flex-shrink: 0;
+  height: 7px;
+  margin: 0 3px;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+  width: 7px;
+}
+
+.legacy-details[open] summary::before {
+  transform: rotate(45deg);
+}
+
+.legacy-details summary:hover {
+  color: var(--accent-strong);
+}
+
+[data-theme='abyssal'] .legacy-details summary:hover {
+  color: var(--accent);
+}
+
+.legacy-details summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.legacy-optional {
+  color: var(--muted);
+  font:
+    500 12.5px 'DM Sans',
+    sans-serif;
+  letter-spacing: 0;
+  margin-left: auto;
 }
 
 .legacy-details[open] summary {
@@ -6321,6 +6462,21 @@ button:focus-visible {
   }
   .customers-panel {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Keep labor and parts as one row, under their headings, on narrow windows. */
+@media (min-width: 801px) and (max-width: 1180px) {
+  .charge-column-labels.labor-columns,
+  .order-workspace .charge-row.labor-row {
+    grid-template-columns: 116px 66px minmax(120px, 1fr) 92px 84px 36px 30px;
+  }
+  .charge-column-labels.parts-columns,
+  .order-workspace .charge-row.parts-row {
+    grid-template-columns: 66px 116px minmax(120px, 1fr) 92px 84px 36px 30px;
+  }
+  .row-remove-btn {
+    width: 30px;
   }
 }
 

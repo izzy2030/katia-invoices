@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FileText, ChevronDown, ChevronUp, Edit3 } from 'lucide-react';
 
 interface ExpandableCustomerNotesProps {
@@ -12,7 +12,20 @@ export default function ExpandableCustomerNotes({
 }: ExpandableCustomerNotesProps) {
   const [isExpanded, setIsExpanded] = useState(Boolean(value && value.trim()));
 
+  const textarea = useRef<HTMLTextAreaElement>(null);
+  const focusOnOpen = useRef(false);
+
   const hasNotes = Boolean(value && value.trim());
+
+  const expand = () => {
+    focusOnOpen.current = true;
+    setIsExpanded(true);
+  };
+
+  useEffect(() => {
+    if (isExpanded && focusOnOpen.current) textarea.current?.focus();
+    focusOnOpen.current = false;
+  }, [isExpanded]);
 
   return (
     <div
@@ -27,7 +40,7 @@ export default function ExpandableCustomerNotes({
         <button
           type="button"
           className="notes-toggle-btn"
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={() => (isExpanded ? setIsExpanded(false) : expand())}
           aria-expanded={isExpanded}
           title={isExpanded ? 'Collapse notes' : 'Expand notes'}
         >
@@ -48,6 +61,7 @@ export default function ExpandableCustomerNotes({
       {isExpanded ? (
         <div className="notes-body-expanded animate-in">
           <textarea
+            ref={textarea}
             className="notes-textarea"
             value={value}
             onChange={(e) => onChange(e.target.value)}
@@ -70,12 +84,13 @@ export default function ExpandableCustomerNotes({
       ) : (
         <div
           className="notes-body-collapsed"
-          onClick={() => setIsExpanded(true)}
+          onClick={expand}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
-              setIsExpanded(true);
+              e.preventDefault();
+              expand();
             }
           }}
         >

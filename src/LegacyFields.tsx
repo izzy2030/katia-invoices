@@ -127,9 +127,11 @@ export default function LegacyFields({
         min={type === 'number' ? '0' : undefined}
         value={value[key]}
         onChange={(event) => onChange(key, event.target.value)}
+        placeholder=" "
       />
     </label>
   );
+  const optional = <span className="legacy-optional">Optional</span>;
   const select = (
     key: keyof LegacyDetails,
     label: string,
@@ -217,7 +219,7 @@ export default function LegacyFields({
   return (
     <>
       <details className="form-card legacy-details">
-        <summary>Internal shop & technician details</summary>
+        <summary>Internal shop & technician details {optional}</summary>
         <div className="form-grid legacy-grid">
           {field('phoneExtension', 'Business phone extension')}
           {field('homePhone', 'Home phone', 'tel')}
@@ -231,11 +233,11 @@ export default function LegacyFields({
         </div>
       </details>
       <details className="form-card legacy-details">
-        <summary>Estimated costs and authorization</summary>
+        <summary>Estimated costs and authorization {optional}</summary>
         {approval('estimate')}
       </details>
       <details className="form-card legacy-details">
-        <summary>Revised estimate / additional work</summary>
+        <summary>Revised estimate / additional work {optional}</summary>
         <label className="field">
           <span>Additional work description</span>
           <textarea
@@ -250,7 +252,7 @@ export default function LegacyFields({
         {approval('revised')}
       </details>
       <details className="form-card legacy-details">
-        <summary>Customer signature and notices</summary>
+        <summary>Customer signature and notices {optional}</summary>
         <div className="form-grid legacy-grid">
           <Signature value={value} onChange={onChange} />
           {field('signatureDate', 'Signature date', 'date')}

@@ -30,7 +30,7 @@ import {
   type TaxDefaults,
   type WorkOrderStatus,
 } from './workOrder';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 const today = () => {
   const date = new Date();
@@ -281,6 +281,7 @@ function App() {
   } | null>(null);
   const [emailModalError, setEmailModalError] = useState('');
   const [showAddress, setShowAddress] = useState(false);
+  const focusStreetOnOpen = useRef(false);
   const [switchVehicleOpen, setSwitchVehicleOpen] = useState(false);
   const [postSaveEmailPrompt, setPostSaveEmailPrompt] = useState<{
     order: WorkOrder;
@@ -1551,6 +1552,15 @@ function App() {
                 id="new-repair-order"
                 className="form-layout"
                 onSubmit={submitOrder}
+                onKeyDown={(event) => {
+                  // Saving prints, so Enter in a field must not submit.
+                  if (
+                    event.key === 'Enter' &&
+                    event.target instanceof HTMLInputElement
+                  ) {
+                    event.preventDefault();
+                  }
+                }}
               >
                 <div className="form-main">
                   <section className="form-card">
@@ -1611,7 +1621,10 @@ function App() {
                           <button
                             type="button"
                             className="address-toggle-btn"
-                            onClick={() => setShowAddress(true)}
+                            onClick={() => {
+                              focusStreetOnOpen.current = true;
+                              setShowAddress(true);
+                            }}
                             title="Add optional customer address"
                           >
                             <span>+</span> Add address
@@ -1623,6 +1636,12 @@ function App() {
                           <label className="field full-width">
                             <span>Street address</span>
                             <input
+                              ref={(input) => {
+                                if (input && focusStreetOnOpen.current) {
+                                  focusStreetOnOpen.current = false;
+                                  input.focus();
+                                }
+                              }}
                               name="address"
                               type="text"
                               value={form.address}
@@ -1805,17 +1824,23 @@ function App() {
                       ).map(([key, label]) => (
                         <span key={key}>
                           {label}
-                          <strong>${totals[key].toFixed(2)}</strong>
+                          <strong className={totals[key] ? '' : 'is-zero'}>
+                            ${totals[key].toFixed(2)}
+                          </strong>
                         </span>
                       ))}
                       <span>
                         Taxable subtotal
-                        <strong>${totals.taxable.toFixed(2)}</strong>
+                        <strong className={totals.taxable ? '' : 'is-zero'}>
+                          ${totals.taxable.toFixed(2)}
+                        </strong>
                       </span>
                       <span>
                         Tax
                         {form.taxRate ? ` (${form.taxRate}%)` : ''}
-                        <strong>${totals.tax.toFixed(2)}</strong>
+                        <strong className={totals.tax ? '' : 'is-zero'}>
+                          ${totals.tax.toFixed(2)}
+                        </strong>
                       </span>
                       <div className="cost-summary-tax-rate">
                         <label
