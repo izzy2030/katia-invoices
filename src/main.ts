@@ -33,6 +33,14 @@ import {
   sendEmailViaGmailApi,
 } from './gmailService';
 import {
+  getResendSettings,
+  saveResendSettings,
+  getResendStatus,
+  sendResendDelivery,
+  sendResendTestEmail,
+  type ResendSettings,
+} from './resendService';
+import {
   saveGoogleOAuthCredentials,
   type GoogleOAuthCredentials,
 } from './gmailAuth';
@@ -974,11 +982,12 @@ async function handleSendGmailTestEmail(
   );
 }
 
-async function handleSendGmailOrderEmail(options: {
+async function handleSendOrderEmail(options: {
   orderId: string;
   recipient: string;
   subject: string;
   personalNote?: string;
+  provider?: 'gmail' | 'resend';
 }): Promise<{ success: boolean; messageId: string; senderEmail: string }> {
   const row = database
     .prepare(
@@ -1065,7 +1074,7 @@ async function handleSendGmailOrderEmail(options: {
         An official landscape PDF copy (<strong>${fullOrder.orderNumber}.pdf</strong>) is attached with complete line items, warranty terms, and shop policies.
       </p>
       <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; font-size: 12px; color: #94a3b8; text-align: center;">
-        ${escapeHtml(shopName)} · Official Invoice Delivery via Gmail
+        ${escapeHtml(shopName)} · Official Invoice Delivery
       </div>
     </div>
   `;
@@ -1089,33 +1098,100 @@ An official PDF copy (${fullOrder.orderNumber}.pdf) is attached to this email.
 Thank you for choosing ${shopName}!
   `.trim();
 
-  // Send via Gmail REST API
-  const result = await sendEmailViaGmailApi(
-    {
+  // Resolve which provider to use:
+  const resendSettings = getResendSettings(database);
+  const resendStatus = getResendStatus(database);
+  const gmailStatus = await getGmailStatus(database);
+
+  let targetProvider = options.provider;
+  if (!targetProvider) {
+    if (resendSettings.provider === 'resend' && resendStatus.configured) {
+      targetProvider = 'resend';
+    } else if (resendSettings.provider === 'gmail' && gmailStatus.connected) {
+      targetProvider = 'gmail';
+    } else if (resendStatus.configured) {
+      targetProvider = 'resend';
+    } else if (gmailStatus.connected) {
+      targetProvider = 'gmail';
+    } else {
+      throw new Error(
+        'Neither Resend nor Gmail is configured. Please configure an email delivery service in Settings.',
+      );
+    }
+  }
+
+  // Automatic fallback handling if preferred provider is not ready
+  if (targetProvider === 'resend' && !resendStatus.configured) {
+    if (gmailStatus.connected) {
+      targetProvider = 'gmail';
+    } else {
+      throw new Error(
+        'Resend is not configured. Please enter your Resend API Key and sender email in Settings.',
+      );
+    }
+  }
+
+  if (targetProvider === 'gmail' && !gmailStatus.connected) {
+    if (resendStatus.configured) {
+      targetProvider = 'resend';
+    } else {
+      throw new Error(
+        'Gmail is not connected. Connect your Google account in Settings or configure Resend.',
+      );
+    }
+  }
+
+  let messageId = '';
+  let senderEmail = '';
+
+  if (targetProvider === 'resend') {
+    const res = await sendResendDelivery({
+      apiKey: resendSettings.resendApiKey,
+      fromEmail: resendSettings.resendFromEmail,
+      senderName: resendSettings.senderName || shopName,
       toEmail: options.recipient.trim(),
-      toName: fullOrder.customerName,
       subject: options.subject.trim(),
       htmlBody: html,
       textBody: plainText,
-      senderName: shopName,
       attachments: [
         {
           filename: `${fullOrder.orderNumber}.pdf`,
-          contentType: 'application/pdf',
-          data: pdfBuffer,
+          content: pdfBuffer.toString('base64'),
         },
       ],
-    },
-    database,
-  );
+    });
+    messageId = res.id;
+    senderEmail = resendSettings.resendFromEmail;
+  } else {
+    const result = await sendEmailViaGmailApi(
+      {
+        toEmail: options.recipient.trim(),
+        toName: fullOrder.customerName,
+        subject: options.subject.trim(),
+        htmlBody: html,
+        textBody: plainText,
+        senderName: shopName,
+        attachments: [
+          {
+            filename: `${fullOrder.orderNumber}.pdf`,
+            contentType: 'application/pdf',
+            data: pdfBuffer,
+          },
+        ],
+      },
+      database,
+    );
+    messageId = result.messageId;
+    senderEmail = result.senderEmail;
+  }
 
   // Update work order with email delivery metadata (preserving order status)
   const deliveryRecord: EmailDeliveryMetadata = {
     recipient: options.recipient.trim(),
     sentAt: new Date().toISOString(),
-    messageId: result.messageId,
+    messageId,
     subject: options.subject.trim(),
-    senderEmail: result.senderEmail,
+    senderEmail,
   };
 
   const updatedOrder: WorkOrder = {
@@ -1129,10 +1205,18 @@ Thank you for choosing ${shopName}!
 
   return {
     success: true,
-    messageId: result.messageId,
-    senderEmail: result.senderEmail,
+    messageId,
+    senderEmail,
   };
 }
+
+// Backward-compatible alias for existing callers/handlers
+const handleSendGmailOrderEmail = (options: {
+  orderId: string;
+  recipient: string;
+  subject: string;
+  personalNote?: string;
+}) => handleSendOrderEmail({ ...options, provider: 'gmail' });
 
 async function exportBackupJson(): Promise<boolean> {
   const defaultFileName = `katia-backup-${localDate()}.json`;
@@ -1506,6 +1590,35 @@ app
           personalNote?: string;
         },
       ) => handleSendGmailOrderEmail(options),
+    );
+
+    // Resend Cloud API handlers
+    ipcMain.handle('email-resend:get-settings', () =>
+      getResendSettings(database),
+    );
+    ipcMain.handle(
+      'email-resend:save-settings',
+      (_event, settings: Partial<ResendSettings>) =>
+        saveResendSettings(settings, database),
+    );
+    ipcMain.handle('email-resend:status', () => getResendStatus(database));
+    ipcMain.handle('email-resend:send-test', (_event, recipientEmail: string) =>
+      sendResendTestEmail(recipientEmail, database),
+    );
+
+    // Unified invoice email sender (supports Resend & Gmail with fallback)
+    ipcMain.handle(
+      'email:send-order',
+      (
+        _event,
+        options: {
+          orderId: string;
+          recipient: string;
+          subject: string;
+          personalNote?: string;
+          provider?: 'gmail' | 'resend';
+        },
+      ) => handleSendOrderEmail(options),
     );
     ipcMain.handle('app:version', () => app.getVersion());
     createWindow();

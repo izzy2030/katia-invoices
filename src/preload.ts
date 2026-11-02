@@ -1,5 +1,6 @@
 import type { BackupImportMode } from './backupService';
 import type { CustomerContact } from './customerHistory';
+import type { ResendSettings, ResendStatus } from './resendService';
 import {
   type CatalogPreset,
   type DashboardPreferences,
@@ -69,6 +70,26 @@ const repairDesk = {
     subject: string;
     personalNote?: string;
   }) => ipcRenderer.invoke('gmail:send-order', options),
+  getResendSettings: (): Promise<ResendSettings> =>
+    ipcRenderer.invoke('email-resend:get-settings'),
+  saveResendSettings: (
+    settings: Partial<ResendSettings>,
+  ): Promise<ResendSettings> =>
+    ipcRenderer.invoke('email-resend:save-settings', settings),
+  getResendStatus: (): Promise<ResendStatus> =>
+    ipcRenderer.invoke('email-resend:status'),
+  sendResendTestEmail: (
+    recipientEmail: string,
+  ): Promise<{ success: boolean; messageId: string }> =>
+    ipcRenderer.invoke('email-resend:send-test', recipientEmail),
+  sendOrderEmail: (options: {
+    orderId: string;
+    recipient: string;
+    subject: string;
+    personalNote?: string;
+    provider?: 'gmail' | 'resend';
+  }): Promise<{ success: boolean; messageId: string; senderEmail: string }> =>
+    ipcRenderer.invoke('email:send-order', options),
   platform: process.platform,
   getAppVersion: () => ipcRenderer.invoke('app:version'),
   setTitleBarOverlay: (options: {

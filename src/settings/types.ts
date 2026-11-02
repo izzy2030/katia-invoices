@@ -9,6 +9,22 @@ export type SettingsTab =
   | 'appearance'
   | 'backup';
 
+export type EmailProvider = 'resend' | 'gmail';
+
+export interface ResendSettings {
+  provider: EmailProvider;
+  resendApiKey: string;
+  resendFromEmail: string;
+  senderName: string;
+}
+
+export interface ResendStatus {
+  configured: boolean;
+  fromEmail?: string;
+  senderName?: string;
+  provider: EmailProvider;
+}
+
 export interface GmailStatus {
   connected: boolean;
   email?: string;
@@ -67,7 +83,29 @@ export interface TaxesTabProps {
   saved: boolean;
 }
 
-export interface GmailTabProps {
+export interface EmailTabProps {
+  // Provider Selection
+  selectedProvider: EmailProvider;
+  onProviderChange: (provider: EmailProvider) => Promise<void>;
+
+  // Resend Cloud API
+  resendSettings: ResendSettings;
+  setResendSettings: React.Dispatch<React.SetStateAction<ResendSettings>>;
+  resendStatus: ResendStatus | null;
+  resendLoading: boolean;
+  resendSaved: boolean;
+  resendError: string;
+  resendTestEmail: string;
+  setResendTestEmail: (v: string) => void;
+  resendTestLoading: boolean;
+  resendTestResult: {
+    status: 'idle' | 'success' | 'error';
+    message: string;
+  };
+  onSaveResendSettings: () => Promise<void>;
+  onSendResendTest: () => Promise<void>;
+
+  // Gmail OAuth 2.0
   gmailStatus: GmailStatus | null;
   gmailAuthLoading: boolean;
   gmailError: string;
@@ -90,6 +128,8 @@ export interface GmailTabProps {
   onSaveOAuthCredentials: () => Promise<void>;
   onSendGmailTest: () => Promise<void>;
 }
+
+export type GmailTabProps = EmailTabProps;
 
 export interface AppearanceTabProps {
   currentTheme: string;

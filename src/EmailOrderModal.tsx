@@ -1,4 +1,4 @@
-import { Mail } from 'lucide-react';
+import { Mail, Zap } from 'lucide-react';
 import { chargeTotals, type WorkOrder } from './workOrder';
 
 export type EmailDraft = {
@@ -8,7 +8,10 @@ export type EmailDraft = {
   subject: string;
   note: string;
   senderDescription?: string;
+  provider?: 'gmail' | 'resend' | null;
+  routeReady?: boolean;
   gmail?: { connected: boolean; email?: string } | null;
+  resend?: { configured: boolean; fromEmail?: string } | null;
 };
 
 type Props = {
@@ -41,11 +44,15 @@ export default function EmailOrderModal({
     style: 'currency',
     currency: 'USD',
   });
+
+  const isReady =
+    draft.routeReady ??
+    Boolean(draft.gmail?.connected || draft.resend?.configured);
+
   const canSend =
     !sending &&
     Boolean(draft.recipient.trim()) &&
-    (postSave ||
-      (Boolean(draft.subject.trim()) && Boolean(draft.gmail?.connected)));
+    (postSave || (Boolean(draft.subject.trim()) && isReady));
 
   return (
     <div
@@ -62,7 +69,11 @@ export default function EmailOrderModal({
       >
         <div className="email-modal-header">
           <div className="email-modal-icon">
-            {postSave ? <Mail size={20} /> : '✉'}
+            {draft.provider === 'resend' ? (
+              <Zap size={20} />
+            ) : (
+              <Mail size={20} />
+            )}
           </div>
           <div>
             <h2 id="email-order-title">
@@ -104,27 +115,30 @@ export default function EmailOrderModal({
         </div>
 
         <div className="email-provider-status">
-          {postSave ? (
+          {draft.senderDescription ? (
             <span className="provider-ready">
               <span className="status-dot online" />
               Sending via {draft.senderDescription}
             </span>
-          ) : draft.gmail === null || draft.gmail === undefined ? (
+          ) : draft.gmail === null && draft.resend === null ? (
             <span className="provider-warning">
               <span className="status-dot warning" />
-              Checking Gmail connection…
+              Checking email configuration…
             </span>
-          ) : draft.gmail.connected ? (
+          ) : isReady ? (
             <span className="provider-ready">
               <span className="status-dot online" />
-              Sending via connected Gmail (<strong>{draft.gmail.email}</strong>)
+              Sending via{' '}
+              {draft.provider === 'resend'
+                ? `Resend (${draft.resend?.fromEmail ?? 'configured'})`
+                : `connected Gmail (${draft.gmail?.email ?? 'connected'})`}
             </span>
           ) : (
             <div className="gmail-modal-disconnected-banner">
               <div className="banner-text">
                 <span className="status-dot warning" />
                 <span>
-                  Gmail account not connected. Connect your Google account in
+                  No email service connected. Set up Resend or connect Gmail in
                   Settings to send invoices.
                 </span>
               </div>
@@ -196,11 +210,11 @@ export default function EmailOrderModal({
           </div>
         )}
 
-        {!postSave && (
+        {!postSave && isReady && (
           <p className="email-modal-confirmation-notice">
             Please review details before sending. Clicking send will deliver
-            this invoice directly from your connected Google account (
-            <strong>{draft.gmail?.email || 'Gmail'}</strong>).
+            this invoice directly to your customer with the official PDF
+            attached.
           </p>
         )}
 
@@ -222,10 +236,10 @@ export default function EmailOrderModal({
             {sending
               ? postSave
                 ? 'Sending…'
-                : 'Sending via Gmail API…'
+                : 'Sending Invoice…'
               : postSave
                 ? 'Send email'
-                : 'Send Invoice via Gmail'}
+                : 'Send Invoice'}
           </button>
         </div>
       </div>

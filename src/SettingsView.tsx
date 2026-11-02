@@ -15,6 +15,9 @@ import type {
   SettingsTab,
   SettingsTabItem,
   GmailStatus,
+  ResendSettings,
+  ResendStatus,
+  EmailProvider,
 } from './settings/types';
 import ShopTab from './settings/ShopTab';
 import PresetsTab from './settings/PresetsTab';
@@ -65,7 +68,7 @@ const TABS: SettingsTabItem[] = [
   {
     id: 'email',
     title: 'Email & Delivery',
-    subtitle: 'Gmail OAuth 2.0',
+    subtitle: 'Resend & Gmail',
     icon: Mail,
     colorClass: 'color-purple',
   },
@@ -95,7 +98,7 @@ export default function SettingsView({
   onImportBackup,
   onExportCsv,
   initialTab = 'shop',
-  appVersion = '1.1.1',
+  appVersion = '1.1.2',
 }: SettingsViewProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
 
@@ -146,6 +149,26 @@ export default function SettingsView({
   });
   const [saved, setSaved] = useState(false);
 
+  // Email Delivery Integration state (Resend & Gmail OAuth)
+  const [selectedEmailProvider, setSelectedEmailProvider] =
+    useState<EmailProvider>('resend');
+  const [resendSettings, setResendSettings] = useState<ResendSettings>({
+    provider: 'resend',
+    resendApiKey: '',
+    resendFromEmail: '',
+    senderName: settings.shopName ?? 'Katia Auto Sales & Repairs',
+  });
+  const [resendStatus, setResendStatus] = useState<ResendStatus | null>(null);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSaved, setResendSaved] = useState(false);
+  const [resendError, setResendError] = useState('');
+  const [resendTestEmail, setResendTestEmail] = useState('');
+  const [resendTestLoading, setResendTestLoading] = useState(false);
+  const [resendTestResult, setResendTestResult] = useState<{
+    status: 'idle' | 'success' | 'error';
+    message: string;
+  }>({ status: 'idle', message: '' });
+
   // Gmail OAuth 2.0 Integration state
   const [gmailStatus, setGmailStatus] = useState<GmailStatus | null>(null);
   const [gmailAuthLoading, setGmailAuthLoading] = useState(false);
@@ -172,8 +195,24 @@ export default function SettingsView({
       .catch((err) => console.error('Failed to get Gmail status:', err));
   };
 
+  const loadResendInfo = () => {
+    Promise.all([
+      window.repairDesk.getResendSettings(),
+      window.repairDesk.getResendStatus(),
+    ])
+      .then(([savedSettings, status]) => {
+        setResendSettings(savedSettings);
+        setResendStatus(status);
+        if (savedSettings.provider) {
+          setSelectedEmailProvider(savedSettings.provider);
+        }
+      })
+      .catch((err) => console.error('Failed to get Resend status:', err));
+  };
+
   useEffect(() => {
     loadGmailStatus();
+    loadResendInfo();
   }, []);
 
   useEffect(() => {
@@ -268,6 +307,64 @@ export default function SettingsView({
       setGmailTestResult({ status: 'error', message: msg });
     } finally {
       setGmailTestLoading(false);
+    }
+  };
+
+  const handleSaveResendSettings = async () => {
+    setResendLoading(true);
+    setResendError('');
+    try {
+      const updated = await window.repairDesk.saveResendSettings({
+        ...resendSettings,
+        provider: selectedEmailProvider,
+      });
+      setResendSettings(updated);
+      setResendSaved(true);
+      const status = await window.repairDesk.getResendStatus();
+      setResendStatus(status);
+      setTimeout(() => setResendSaved(false), 2200);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setResendError(`Failed to save Resend settings: ${msg}`);
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  const handleEmailProviderChange = async (provider: EmailProvider) => {
+    setSelectedEmailProvider(provider);
+    try {
+      await window.repairDesk.saveResendSettings({ provider });
+      const status = await window.repairDesk.getResendStatus();
+      setResendStatus(status);
+    } catch (err) {
+      console.error('Failed to save preferred email provider:', err);
+    }
+  };
+
+  const handleSendResendTest = async () => {
+    if (!resendTestEmail.trim()) {
+      setResendTestResult({
+        status: 'error',
+        message: 'Please enter a recipient email address for the test.',
+      });
+      return;
+    }
+    setResendTestLoading(true);
+    setResendTestResult({ status: 'idle', message: '' });
+    try {
+      const res = await window.repairDesk.sendResendTestEmail(
+        resendTestEmail.trim(),
+      );
+      setResendTestResult({
+        status: 'success',
+        message: `Test email delivered via Resend! (Message ID: ${res.messageId})`,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setResendTestResult({ status: 'error', message: msg });
+    } finally {
+      setResendTestLoading(false);
     }
   };
 
@@ -470,6 +567,20 @@ export default function SettingsView({
 
         {activeTab === 'email' && (
           <GmailTab
+            selectedProvider={selectedEmailProvider}
+            onProviderChange={handleEmailProviderChange}
+            resendSettings={resendSettings}
+            setResendSettings={setResendSettings}
+            resendStatus={resendStatus}
+            resendLoading={resendLoading}
+            resendSaved={resendSaved}
+            resendError={resendError}
+            resendTestEmail={resendTestEmail}
+            setResendTestEmail={setResendTestEmail}
+            resendTestLoading={resendTestLoading}
+            resendTestResult={resendTestResult}
+            onSaveResendSettings={handleSaveResendSettings}
+            onSendResendTest={handleSendResendTest}
             gmailStatus={gmailStatus}
             gmailAuthLoading={gmailAuthLoading}
             gmailError={gmailError}

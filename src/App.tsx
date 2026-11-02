@@ -329,7 +329,7 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [notice, setNoticeText] = useState('');
   const [noticeIsError, setNoticeIsError] = useState(false);
-  const [appVersion, setAppVersion] = useState('1.1.1');
+  const [appVersion, setAppVersion] = useState('1.1.2');
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
   const [emailSending, setEmailSending] = useState(false);
   const [emailModalError, setEmailModalError] = useState('');
@@ -879,15 +879,29 @@ function App() {
   async function checkEmailConfigured(): Promise<{
     configured: boolean;
     senderDescription: string;
+    provider: 'gmail' | 'resend' | null;
   }> {
     try {
-      const route = resolveEmailRoute(await window.repairDesk.getGmailStatus());
-      if (route.kind === 'gmail') {
-        return { configured: true, senderDescription: route.senderDescription };
+      const [gmail, resendStatus, resendSettings] = await Promise.all([
+        window.repairDesk.getGmailStatus().catch(() => null),
+        window.repairDesk.getResendStatus().catch(() => null),
+        window.repairDesk.getResendSettings().catch(() => null),
+      ]);
+      const route = resolveEmailRoute(
+        gmail,
+        resendStatus,
+        resendSettings?.provider,
+      );
+      if (route.kind === 'gmail' || route.kind === 'resend') {
+        return {
+          configured: true,
+          senderDescription: route.senderDescription,
+          provider: route.kind,
+        };
       }
-      return { configured: false, senderDescription: '' };
+      return { configured: false, senderDescription: '', provider: null };
     } catch {
-      return { configured: false, senderDescription: '' };
+      return { configured: false, senderDescription: '', provider: null };
     }
   }
 
@@ -929,7 +943,7 @@ function App() {
         console.warn('Direct print error:', printErr);
       });
 
-      // Check if Gmail delivery is configured
+      // Check if email delivery is configured (Resend or Gmail)
       const emailConfig = await checkEmailConfigured();
       if (emailConfig.configured) {
         const contact = customerContacts.find(
@@ -944,6 +958,8 @@ function App() {
           subject: `Repair Order ${saved.orderNumber} · Katia Auto Sales & Repairs`,
           note: `Thank you for choosing Katia Auto Sales & Repairs. Attached is your official repair order and invoice (${saved.orderNumber}.pdf).`,
           senderDescription: emailConfig.senderDescription,
+          provider: emailConfig.provider,
+          routeReady: true,
         });
       } else {
         setNotice(
@@ -1036,14 +1052,33 @@ function App() {
       subject: `Repair Order ${order.orderNumber} · Katia Auto Sales & Repairs`,
       note: `Thank you for choosing Katia Auto Sales & Repairs. Attached is the official repair order and invoice (${order.orderNumber}.pdf) for your records.`,
       gmail: null,
+      resend: null,
     });
-    void window.repairDesk
-      .getGmailStatus()
-      .then((gmail) =>
+    void Promise.all([
+      window.repairDesk.getGmailStatus().catch(() => null),
+      window.repairDesk.getResendStatus().catch(() => null),
+      window.repairDesk.getResendSettings().catch(() => null),
+    ])
+      .then(([gmail, resendStatus, resendSettings]) => {
+        const route = resolveEmailRoute(
+          gmail,
+          resendStatus,
+          resendSettings?.provider,
+        );
         setEmailDraft((current) =>
-          current?.mode === 'full' ? { ...current, gmail } : current,
-        ),
-      )
+          current?.mode === 'full'
+            ? {
+                ...current,
+                gmail,
+                resend: resendStatus,
+                provider: route.kind === 'none' ? null : route.kind,
+                senderDescription:
+                  route.kind === 'none' ? undefined : route.senderDescription,
+                routeReady: route.kind !== 'none',
+              }
+            : current,
+        );
+      })
       .catch(console.error);
   }
 
@@ -1072,21 +1107,20 @@ function App() {
     const { mode, order } = emailDraft;
     try {
       if (mode === 'post-save') {
-        const gmail = await window.repairDesk
-          .getGmailStatus()
-          .catch(() => null);
-        if (resolveEmailRoute(gmail).kind !== 'gmail') {
+        const emailConfig = await checkEmailConfigured();
+        if (!emailConfig.configured) {
           setEmailModalError(
-            'Gmail is not connected. Connect it in Settings to email invoices.',
+            'No email delivery service is configured. Configure Resend or connect Gmail in Settings.',
           );
           return;
         }
       }
-      const res = await window.repairDesk.sendGmailOrderEmail({
+      const res = await window.repairDesk.sendOrderEmail({
         orderId: order.id,
         recipient,
         subject: emailDraft.subject.trim(),
         personalNote: emailDraft.note.trim(),
+        provider: emailDraft.provider ?? undefined,
       });
       if (!res.success) {
         setEmailModalError('Could not send email.');
@@ -1095,7 +1129,7 @@ function App() {
       setNotice(
         mode === 'post-save'
           ? `✓ ${order.orderNumber} sent via email to ${recipient}!`
-          : `${order.orderNumber} sent via Gmail to ${recipient}`,
+          : `${order.orderNumber} sent via email to ${recipient}`,
       );
       setEmailDraft(null);
       void window.repairDesk.listWorkOrders().then(setOrders);
